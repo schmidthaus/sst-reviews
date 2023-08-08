@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.4.12  
+Version: 3.4.14  
 */
 function get_reviews_histogram_shortcode($atts)
 {
@@ -139,6 +139,7 @@ function get_reviews_histogram_shortcode($atts)
 add_shortcode('reviews_shortcode', 'get_reviews_histogram_shortcode');
 
 function get_reviews_histogram_handler() {
+	error_log('AJAX request received at: ' . admin_url('admin-ajax.php'));
 	// Check AJAX nonce for security
 	check_ajax_referer('reviews_histogram_nonce', 'security');
 	
@@ -159,11 +160,12 @@ add_action('wp_ajax_nopriv_get_reviews_histogram', 'get_reviews_histogram_handle
 
 // Hook to the wpv_filter_wpv_view_widget_output to replace the shortcode
 add_filter('wpv_filter_wpv_view_widget_output', function($out) {
-	if (preg_match('/\[reviews_shortcode course="(.*?)" mod="(.*?)"]/', $out, $matches)) {
+	// Evaluate all combinations of attributes passed to the shortcode
+	if (preg_match('/\[reviews_shortcode( course="(.*?)")?( mod="(.*?)")?( stars="(.*?)")?]/', $out, $matches)) {
 		$atts = array(
-			'course-dynamic' => sanitize_text_field($matches[1]),
-			'mod-dynamic' => sanitize_text_field($matches[2]),
-			'stars-dynamic' => sanitize_text_field($matches[3]),
+			'course-dynamic' => isset($matches[2]) ? sanitize_text_field($matches[2]) : null,
+			'mod-dynamic' => isset($matches[4]) ? sanitize_text_field($matches[4]) : null,
+			'stars-dynamic' => isset($matches[6]) ? sanitize_text_field($matches[6]) : null,
 		);
 		$out = str_replace($matches[0], get_reviews_histogram_shortcode($atts), $out);
 	}
