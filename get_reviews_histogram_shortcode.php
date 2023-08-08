@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.5.2  
+Version: 3.5.3  
 */
 function get_reviews_histogram_shortcode($atts)
 {
@@ -53,34 +53,42 @@ function get_reviews_histogram_shortcode($atts)
 	if ($a['course'] && $a['mod'] && $a['stars']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d)))";
 		$prepared_query = $wpdb->prepare($query, $a['course'], $a['mod'], $a['stars']);
+		error_log('SQL query: course, mod, stars');
 	} elseif ($a['course'] && $a['mod']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s))";
 		$prepared_query = $wpdb->prepare($query, $a['course'], $a['mod']);
+		error_log('SQL query: course, mod');
 	} elseif ($a['course'] && $a['stars']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d))";
 		$prepared_query = $wpdb->prepare($query, $a['course'], $a['stars']);
+		error_log('SQL query: course, stars');
 	} elseif ($a['mod'] && $a['stars']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d))";
 		$prepared_query = $wpdb->prepare($query, $a['mod'], $a['stars']);
+		error_log('SQL query: mod, stars');
 	} elseif ($a['course']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s)";
 		$prepared_query = $wpdb->prepare($query, $a['course']);
+		error_log('SQL query: course');
 	} elseif ($a['mod']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s)";
 		$prepared_query = $wpdb->prepare($query, $a['mod']);
+		error_log('SQL query: mod');
 	} elseif ($a['stars']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d)";
 		$prepared_query = $wpdb->prepare($query, $a['stars']);
+		error_log('SQL query: stars');
 	} else {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars'";
 		$prepared_query = $query;
+		error_log('SQL query: all');
 	}
 
 	// Execute the query
 	$results = $wpdb->get_col($prepared_query);
 	
 	// Log the SQL query results
-	error_log(print_r($results, true));
+	error_log('SQL query Results: ' . print_r($results, true));
 	
 	// Trigger an action so that other plugins/themes can modify the result if needed
 	do_action('get_reviews_histogram_after_query', $results, $a);
@@ -104,6 +112,8 @@ function get_reviews_histogram_shortcode($atts)
 	// Tally the results and calculate the total number of reviews
 	$ratings = array_count_values($results);
 	$total_ratings = array_sum($ratings);
+	
+	error_log('Tally ratings: ' . $ratings . ', Total ratings: ' . $total_ratings);
 	
 	// Calculate the ratings percentages
 	$ratings_percentages = [];
@@ -216,8 +226,6 @@ function enqueue_reviews_histogram_script() {
 		)
 	);
 }
-<<<<<<< HEAD
+
 add_action('wp_enqueue_scripts', 'enqueue_reviews_histogram_script');
-=======
 add_action('wp_enqueue_scripts', 'enqueue_reviews_histogram_script');
->>>>>>> main
