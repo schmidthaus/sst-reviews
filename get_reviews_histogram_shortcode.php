@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.4.12  
+Version: 3.4.15  
 */
 function get_reviews_histogram_shortcode($atts)
 {
