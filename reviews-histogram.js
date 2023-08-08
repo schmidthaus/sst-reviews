@@ -1,4 +1,4 @@
-// Reviews Histogram AJAX functionality v3.5.4
+// Reviews Histogram AJAX functionality v3.5.5
 jQuery(function($) {
 	var courseFilter = $('[name="wpv-wpcf-testimonial-course"]');
 	var modFilter = $('[name="wpv-wpcf-testimonial-mod"]');
@@ -14,12 +14,12 @@ jQuery(function($) {
 			'stars-dynamic': starsFilter.val() ? starsFilter.val() : null,
 			security: ajax_object.security // Use nonce for added security
 		};
-
-		// Insert the check here
+		
+		// Check if nonce is available
 		if (!data.security || data.security === "") {
 			console.error("Nonce security token is missing.");
 			return;
-		}
+		};
 
 		$.post(ajax_object.ajax_url, data, function(response) { 
 			// Update the histogram with the new data only if the HTML is not empty

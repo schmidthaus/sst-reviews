@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.5.4  
+Version: 3.5.5  
 */
 function get_reviews_histogram_shortcode($atts)
 {
@@ -169,11 +169,16 @@ function get_reviews_histogram_shortcode($atts)
 }
 add_shortcode('reviews_shortcode', 'get_reviews_histogram_shortcode');
 
+// Generate nonce
+function get_reviews_histogram_nonce() {
+	return wp_create_nonce('reviews_histogram_nonce');
+}
+
 function get_reviews_histogram_handler() {
 	error_log('AJAX request received at: ' . admin_url('admin-ajax.php'));
 
 	// Check AJAX nonce for security
-	if (!check_ajax_referer('reviews_histogram_nonce', 'security', false)) {
+	if (!check_ajax_referer(get_reviews_histogram_nonce(), 'security', false)) {
 		error_log('Nonce check failed.');
 		wp_die('Nonce check failed.', 403);
 	}
@@ -222,7 +227,7 @@ function enqueue_reviews_histogram_script() {
 		'ajax_object',
 		array(
 			'ajax_url' => admin_url('admin-ajax.php'),
-			'security' => wp_create_nonce('reviews_histogram_nonce'),
+			'security' => get_reviews_histogram_nonce(),
 		)
 	);
 }
