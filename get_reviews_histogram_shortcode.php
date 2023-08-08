@@ -4,6 +4,13 @@ Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
 Version: 3.5.5  
 */
+
+// Generate nonce
+function get_reviews_histogram_nonce() {
+	return wp_create_nonce('reviews_histogram_nonce');
+}
+
+// Create Reviews Histogram shortcode
 function get_reviews_histogram_shortcode($atts)
 {
 	// Check if the function has already been executed
@@ -168,11 +175,6 @@ function get_reviews_histogram_shortcode($atts)
 	}
 }
 add_shortcode('reviews_shortcode', 'get_reviews_histogram_shortcode');
-
-// Generate nonce
-function get_reviews_histogram_nonce() {
-	return wp_create_nonce('reviews_histogram_nonce');
-}
 
 function get_reviews_histogram_handler() {
 	error_log('AJAX request received at: ' . admin_url('admin-ajax.php'));
