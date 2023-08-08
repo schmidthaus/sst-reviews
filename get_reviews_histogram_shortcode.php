@@ -2,11 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-<<<<<<< HEAD
-Version: 3.4.15  
-=======
-Version: 3.4.14  
->>>>>>> main
+Version: 3.5.1  
 */
 function get_reviews_histogram_shortcode($atts)
 {
@@ -27,36 +23,53 @@ function get_reviews_histogram_shortcode($atts)
 	$valid_mods = ['spo', 'lons', 'lonl'];
 
 	// Unpack and sanitize the attributes
-	$a = shortcode_atts(array('course' => null, 'mod' => null, 'course-dynamic' => null, 'mod-dynamic' => null, 'stars-dynamic' => null), $atts);
+	$a = shortcode_atts(array('course' => null, 'mod' => null, 'stars' => null, 'course-dynamic' => null, 'mod-dynamic' => null, 'stars-dynamic' => null), $atts);
 	$a = array_map('sanitize_text_field', $a);
-
-	// Validate 'course' and 'course-dynamic' values
+	
+	// Validate 'course', 'mod', and 'stars' values
 	if (in_array($a['course-dynamic'], $valid_courses)) {
 		$a['course'] = $a['course-dynamic'];
 	} elseif (!in_array($a['course'], $valid_courses)) {
 		$a['course'] = null;
 	}
-
-	// Validate 'mod' and 'mod-dynamic' values
+	
 	if (in_array($a['mod-dynamic'], $valid_mods)) {
 		$a['mod'] = $a['mod-dynamic'];
 	} elseif (!in_array($a['mod'], $valid_mods)) {
 		$a['mod'] = null;
 	}
-
-	// prepare the SQL query based attribute values
-	if ($a['course'] && $a['mod']) {
+	
+	if (isset($a['stars-dynamic']) && is_numeric($a['stars-dynamic']) && $a['stars-dynamic'] >= 1 && $a['stars-dynamic'] <= 5) {
+		$a['stars'] = $a['stars-dynamic'];
+	} elseif (!isset($a['stars']) || !is_numeric($a['stars']) || $a['stars'] < 1 || $a['stars'] > 5) {
+		$a['stars'] = null;
+	}
+	
+	// prepare the SQL query based on attribute values
+	if ($a['course'] && $a['mod'] && $a['stars']) {
+		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d)))";
+		$prepared_query = $wpdb->prepare($query, $a['course'], $a['mod'], $a['stars']);
+	} elseif ($a['course'] && $a['mod']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s))";
 		$prepared_query = $wpdb->prepare($query, $a['course'], $a['mod']);
+	} elseif ($a['course'] && $a['stars']) {
+		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d))";
+		$prepared_query = $wpdb->prepare($query, $a['course'], $a['stars']);
+	} elseif ($a['mod'] && $a['stars']) {
+		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d))";
+		$prepared_query = $wpdb->prepare($query, $a['mod'], $a['stars']);
 	} elseif ($a['course']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course' AND meta_value = %s)";
 		$prepared_query = $wpdb->prepare($query, $a['course']);
 	} elseif ($a['mod']) {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-mod' AND meta_value = %s)";
 		$prepared_query = $wpdb->prepare($query, $a['mod']);
+	} elseif ($a['stars']) {
+		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars' AND post_id IN (SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-stars' AND meta_value = %d)";
+		$prepared_query = $wpdb->prepare($query, $a['stars']);
 	} else {
 		$query = "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'wpcf-testimonial-course-stars'";
-		$prepared_query = $wpdb->prepare($query);
+		$prepared_query = $query;
 	}
 
 	// Execute the query
@@ -74,13 +87,13 @@ function get_reviews_histogram_shortcode($atts)
 	 // If no results are found, return early with a message
 	if (empty($results)) {
 		error_log('No results found from SQL query.');
-
+	
 		if (defined('DOING_AJAX') && DOING_AJAX) {
 			wp_send_json(array(
-				'html' => 'No course or mod reviews found.',
+				'html' => 'No course, mod, or stars reviews found.',
 			));
 		} else {
-			return 'No course or mod reviews found.';
+			return 'No course, mod, or stars reviews found.';
 		}
 	}
 
@@ -144,8 +157,12 @@ add_shortcode('reviews_shortcode', 'get_reviews_histogram_shortcode');
 
 function get_reviews_histogram_handler() {
 	error_log('AJAX request received at: ' . admin_url('admin-ajax.php'));
+
 	// Check AJAX nonce for security
-	check_ajax_referer('reviews_histogram_nonce', 'security');
+	if (!check_ajax_referer('reviews_histogram_nonce', 'security', false)) {
+		error_log('Nonce check failed.');
+		wp_die('Nonce check failed.', 403);
+	}
 	
 	// Use the $_POST array to retrieve filter values
 	$atts = array(
