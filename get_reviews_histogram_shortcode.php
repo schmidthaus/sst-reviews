@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.5.3  
+Version: 3.5.4  
 */
 function get_reviews_histogram_shortcode($atts)
 {
@@ -113,7 +113,7 @@ function get_reviews_histogram_shortcode($atts)
 	$ratings = array_count_values($results);
 	$total_ratings = array_sum($ratings);
 	
-	error_log('Tally ratings: ' . $ratings . ', Total ratings: ' . $total_ratings);
+	error_log('Tally ratings: ' . print_r($ratings, true) . ', Total ratings: ' . $total_ratings);
 	
 	// Calculate the ratings percentages
 	$ratings_percentages = [];
@@ -213,7 +213,7 @@ function enqueue_reviews_histogram_script() {
 		'reviews-histogram-ajax-script',
 		plugins_url('/reviews-histogram/reviews-histogram-script.js'),
 		array('jquery'),
-		'3.4.12',
+		'3.5.4',
 		true
 	);
 

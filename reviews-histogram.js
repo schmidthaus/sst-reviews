@@ -1,4 +1,4 @@
-// Reviews Histogram AJAX functionality v3.4.12
+// Reviews Histogram AJAX functionality v3.5.4
 jQuery(function($) {
 	var courseFilter = $('[name="wpv-wpcf-testimonial-course"]');
 	var modFilter = $('[name="wpv-wpcf-testimonial-mod"]');
@@ -36,7 +36,7 @@ jQuery(function($) {
 	// Debounce function
 	function debounce(func, wait) {
 		var timeout;
-
+	
 		return function executedFunction() {
 			var context = this;
 			var args = arguments;
@@ -45,15 +45,15 @@ jQuery(function($) {
 				timeout = null;
 				func.apply(context, args);
 			};
-
+	
 			clearTimeout(timeout);
 			timeout = setTimeout(later, wait);
 		};
 	}
-
+	
 	// Listen for changes on the filters
 	filters.forEach(function(filter) {
-		filter.change(debounce(handleFilterChange, 500)); // debouncing the event handler to 500 ms
+		filter.change(debounce(handleFilterChange, 1000)); // debouncing the event handler to 1000 ms
 	});
 
 	// Initial call to handleFilterChange to ensure histogram is updated on page load
