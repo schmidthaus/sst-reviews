@@ -1,432 +1,174 @@
 <?php
-/* 
-Name: Pre-populate Course Review form
-Description: Populate the current User and course info fields on the Course Review form
-if the user is logged in and on a LearnDash course page.
-Version: 1.9  
-*/
+// Version 4.2.3
+add_filter( 'gform_pre_render_11', 'sbma_populate_fields' );
+add_filter( 'gform_validation_11', 'sbma_prevent_duplicate_entries' );
+add_action( 'gform_after_submission_11', 'sbma_mark_course_as_complete_redirect', 10, 2);
 
-// If the user is logged in, populate fields with user and course data.
-add_filter( 'gform_field_value_11', 'sbma_populate_course_comment_fields', 10, 3 );
-function sbma_populate_course_comment_fields( $value, $field, $name ) {
-	// If it's not a logged-in user viewing this, never mind
-	if( ! is_user_logged_in() ) return $value;
-
-	// Get Logged in user info
-	$current_user = wp_get_current_user();
-	$fname = $current_user->user_firstname;
-	$lname = $current_user->user_lastname;
-	$lms_org = $current_user->billing_company;
-	$lms_user_id = $current_user->ID;
-	
-	// Initialize course id and course name variables
-	$course_id = '';
-	$course_name = '';
-	
-	// Check for current page being of post_type containing 'sfwd'
-	$post_type = get_post_type();
-	if (strpos($post_type, 'sfwd') !== false) {
-		// Get LearnDash Course info
-		$lesson_id = get_the_ID();
-		$course_id = learndash_get_course_id($lesson_id);//get course id
-		$course = get_post($course_id); //get course
-		if ($course) {
-			$course_name = $course->post_title;
-		}
+function sbma_populate_fields($form) {
+	if ($form['id'] != 11) {
+		return;
 	}
+	
+	$params = array_map('sanitize_text_field', $_GET);
+	$is_logged_in = is_user_logged_in();
+	$current_user = $is_logged_in ? wp_get_current_user() : null;
+	$post_type = get_post_type();
+	$contains_sfwd = strpos($post_type, 'sfwd') !== false;
 
-	// Populate Gravity form Dynamic Population Parameter names
-	$values = array(
-		'lms_fname' => $fname,
-		'lms_lname' => $lname,
-		'lms_org' => $lms_org,
-		// 'lms_user_id'   => $lms_user_id,
-		'lms_course_id'   => $course_id,
-		'lms_course_name' => $course_name
+	$course_mappings = array(
+		"MS Excel Beginner Course" => 909,
+		"MS Excel Intermediate Course" => 1221,
+		"MS Excel Advanced Course" => 1548,
+		"MS Excel Automation Course" => 1920,
+		"MS Excel Foundation Course" => 6606,
+		"MS Outlook Foundation Course" => 6248,
+		"MS Windows Foundation Course" => 5349
 	);
 
-	return $values[$name] ?? $value;
-}
-
-
-/* 
-Name: Prevent duplicate submissions of the Course Review form
-Description: Users occasionally resubmit the Course Review form. This function works 
-to prevent these duplicate submissions by checking if an entry already exists in the Gravity Forms entries in the database.
-Version: 2.32  
-*/
-
-// If the user is logged in, populate fields with user and course data.
-add_filter( 'gform_field_value_11', 'sbma_populate_course_comment_fields', 10, 3 );
-function sbma_populate_course_comment_fields( $value, $field, $name ) {
-	// If it's not a logged-in user viewing this, never mind
-	if( ! is_user_logged_in() ) return $value;
-
-	// Get Logged in user info
-	$current_user = wp_get_current_user();
-	$fname = $current_user->user_firstname;
-	$lname = $current_user->user_lastname;
-	$lms_org = $current_user->billing_company;
-	$lms_user_id = $current_user->ID;
-	
-	// Initialize course id and course name variables
-	$course_id = '';
-	$course_name = '';
-	
-	// Check for current page being of post_type containing 'sfwd'
-	$post_type = get_post_type();
-	if (strpos($post_type, 'sfwd') !== false) {
-		// Get LearnDash Course info
-		$lesson_id = get_the_ID();
-		$course_id = learndash_get_course_id($lesson_id);//get course id
-		$course = get_post($course_id); //get course
-		if ($course) {
-			$course_name = $course->post_title;
-		}
-	}
-
-	// Populate Gravity form Dynamic Population Parameter names
-	$values = array(
-		'lms_fname' => $fname,
-		'lms_lname' => $lname,
-		'lms_org' => $lms_org,
-		// 'lms_user_id'   => $lms_user_id,
-		'lms_course_id'   => $course_id,
-		'lms_course_name' => $course_name
+	$mod_mappings = array(
+		"Self-paced Online" => "spo",
+		"Live Online" => "lonl",
+		"Live Onsite" => "lons"
 	);
 
-	return $values[$name] ?? $value;
-}
+	foreach ($form['fields'] as &$field) {
+		$field_id = $field->id;
 
-// 
-// // Defined constants for Gravity Forms field IDs
-// Constants to replace hardcoded field IDs in the script
-define('FIELD_ID_USER', '8'); // User ID field
-define('FIELD_ID_COURSE', '7'); // Course ID field
-define('FIELD_ID_MOD', '13'); // Course module field
-define('FIELD_ID_EMAIL', '17'); // Email field
-define('FIELD_ID_DUPLICATE', '19'); // Duplicate detection field
+		$url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
+		$course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
+		$course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
+		$mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
 
-global $current_user_id;
-$current_user_id = get_current_user_id(); // Get the ID of the currently logged in user.
-
-function save_user_id_pre_submission_v22($form) {
-	global $current_user_id;
-	foreach($form['fields'] as &$field) {
-		// This part sets the default user ID field
-		if($field->id == 8) {
-			$field->defaultValue = $current_user_id;
-			error_log('save_user_id_pre_submission_v23: Current User ID (get_current_user_id): ' . $current_user_id);
+		// Field 13: Method of Delivery
+		if ($field_id == 13) {
+			$mod_value = $mod_mappings[$mod_from_url] ?? $mod_from_url;
+			$field->defaultValue = $mod_value;
 		}
 
-		// Set the default Course ID field when the form is on a post of type 'sfwd'
-		if($field->id == 7 && strpos(get_post_type(), 'sfwd') !== false) {
-			$lesson_id = get_the_ID();
-			$course_id = learndash_get_course_id($lesson_id);
-			error_log('save_user_id_pre_submission_v23: Course ID (learndash_get_course_id): ' . $course_id);
-			$field->defaultValue = $course_id;
+		// Fields 11 and 7: Course Name and Course ID
+		if ($field_id == 11 || $field_id == 7) {
+			$url_course_name_valid = isset($course_mappings[$course_name_from_url]);
+			$url_course_id_valid = in_array($course_id_from_url, $course_mappings);
+
+			if ($url_course_name_valid && $url_course_id_valid && $course_mappings[$course_name_from_url] === $course_id_from_url) {
+				$field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_id_from_url;
+			} elseif ($url_course_name_valid) {
+				$field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_mappings[$course_name_from_url];
+			} elseif ($url_course_id_valid) {
+				$field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $course_mappings) : $course_id_from_url;
+			}
+		}
+
+		// Other fields when not on 'sfwd' pages
+		if (!$contains_sfwd) {
+			if ($is_logged_in) {
+				if ($field_id == 4.3) {
+					$field->defaultValue = $current_user->user_firstname;
+				}
+				if ($field_id == 4.6) {
+					$field->defaultValue = $current_user->user_lastname;
+				}
+				if ($field_id == 5) {
+					$field->defaultValue = get_user_meta($current_user->ID, 'billing_company', true);
+				}
+				if ($field_id == 8) {
+					$field->defaultValue = $current_user->ID;
+				}
+				if ($field_id == 17) {
+					$field->defaultValue = $current_user->user_email;
+				}
+			}
+
+			if ($url_value !== null) {
+				$field->defaultValue = $url_value;
+			}
+		}
+
+		// When on 'sfwd' pages
+		if ($contains_sfwd && $is_logged_in) {
+			if ($field_id == 7) {
+				$field->defaultValue = learndash_get_course_id();
+			}
+			if ($field_id == 11) {
+				$field->defaultValue = get_the_title(learndash_get_course_id());
+			}
+			if ($field_id == 13) {
+				$field->defaultValue = 'spo';
+			}
 		}
 	}
+
 	return $form;
 }
-add_filter('gform_pre_render_11', 'save_user_id_pre_submission_v22');
 
-function check_for_duplicate_entries_v22($validation_result) {
-	global $current_user_id;
 
-	error_log('check_for_duplicate_entries_v22: Starting Current User ID (get_current_user_id): ' . $current_user_id);
+function sbma_prevent_duplicate_entries( $validation_result ) {
+	if ($form['id'] != 11) {
+		return;
+	}
+	
+	global $wpdb;
 
-	$form = $validation_result["form"];
+	$form = $validation_result['form'];
+	$is_logged_in = is_user_logged_in();
+	$current_user = $is_logged_in ? wp_get_current_user() : null;
+	$email = rgpost('input_17');
+	$course_id = rgpost('input_7');
+	$mod = rgpost('input_13');
 
-	// Check if the post type contains 'sfwd'
-	if(strpos(get_post_type(), 'sfwd') !== false) {
-		// Get the current LearnDash course ID
-		$lesson_id = get_the_ID();
-		error_log( "Retrieved Lesson ID: " . $lesson_id );
-		$course_id = learndash_get_course_id($lesson_id);
-		error_log( "learndash_get_course_id() return value: " . $course_id );
-		$course_mod = 'spo';
-	} else if(get_the_ID() == 12463) {
-		// Retrieve course ID and course mod from the form submission
-		$course_id = rgpost('input_' . FIELD_ID_COURSE);
-		$course_mod = (rgpost('input_' . FIELD_ID_MOD)) ? rgpost('input_' . FIELD_ID_MOD) : 'lonl';
-	} else {
-		error_log('check_for_duplicate_entries_v22: Returning validation_result as-is.');
-		return $validation_result;
+	// Prepare query to search for duplicates
+	$where = $is_logged_in 
+		? $wpdb->prepare("meta_key = %s AND meta_value = %s", '_gform-entry-user-id', $current_user->ID)
+		: $wpdb->prepare("meta_key = %s AND meta_value = %s", '17', $email);
+
+	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", '7', $course_id);
+	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", '13', $mod);
+
+	$query = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE {$where}";
+	$count = $wpdb->get_var($query);
+
+	// If duplicates are found
+	if ($count > 0) {
+		$validation_result['is_valid'] = false;
+		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 	}
 
-	// Create search criteria based on whether the user is logged in or not
-	if(is_user_logged_in()) {
-		$search_criteria = get_search_criteria_logged_in($current_user_id, $course_id, $course_mod);
-	} else {
-		$email = rgpost('input_' . FIELD_ID_EMAIL);
-		$search_criteria = get_search_criteria_logged_out($email, $course_id, $course_mod);
-	}
-
-	error_log('check_for_duplicate_entries_v22: Search Criteria: ' . print_r($search_criteria, true));
-
-	// Check for existing entries that match the search criteria
-	$dup_check = GFAPI::count_entries($form['id'], $search_criteria);
-	error_log('check_for_duplicate_entries_v22: Duplication Check Result: ' . $dup_check);
-
-	// If a duplicate was found, mark the form as duplicate
-	if($dup_check > 0) {
-		$_POST['input_' . FIELD_ID_DUPLICATE] = 'true'; // Update duplicate field in POST data
-		$validation_result["is_valid"] = true; // Override validation to show confirmation message
-		error_log('check_for_duplicate_entries_v22: Duplication Check True: ' . $validation_result["is_valid"]);
-	}
-
+	// Update $validation_result to reflect if duplicates are found
+	$validation_result['form'] = $form;
 	return $validation_result;
 }
-add_filter('gform_validation_11', 'check_for_duplicate_entries_v22');
 
 
-function get_search_criteria_logged_in($user_id, $course_id, $course_mod) {
-	// Define search criteria for logged in users
-	return array(
-		'status' => 'active',
-		'field_filters' => array(
-			'mode' => 'all',
-			array(
-				'key' => FIELD_ID_USER,
-				'value' => $user_id
-			),
-			array(
-				'key' => FIELD_ID_COURSE,
-				'value' => $course_id
-			),
-			array(
-				'key' => FIELD_ID_MOD,
-				'value' => $course_mod
-			)
-		)
-	);
-}
-
-function get_search_criteria_logged_out($email, $course_id, $course_mod) {
-	// Define search criteria for logged out users
-	return array(
-		'status' => 'active',
-		'field_filters' => array(
-			'mode' => 'all',
-			array(
-				'key' => FIELD_ID_EMAIL,
-				'value' => $email
-			),
-			array(
-				'key' => FIELD_ID_COURSE,
-				'value' => $course_id
-			),
-			array(
-				'key' => FIELD_ID_MOD,
-				'value' => $course_mod
-			)
-		)
-	);
-}
-
-function modify_confirmation_message_v22($confirmation, $form, $entry, $ajax) {
-	// Change the confirmation message if the form was marked as duplicate
-	if(rgar($entry, FIELD_ID_DUPLICATE) === 'true') {
-		$confirmation = "<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>";
-	}
-	return $confirmation;
-}
-add_filter('gform_confirmation_11', 'modify_confirmation_message_v22', 10, 4);
-
-function delete_duplicate_entry_v22($entry, $form) {
-	global $current_user_id;
-	$course_id = rgar($entry, FIELD_ID_COURSE); // Retrieve course id from the entry
-	$course_mod = rgar($entry, FIELD_ID_MOD); // Retrieve course mod from the entry
-	$email = rgar($entry, FIELD_ID_EMAIL); // Retrieve email from the entry
-
-	// Create search criteria based on whether the user is logged in or not
-	if(is_user_logged_in()) {
-		$search_criteria = get_search_criteria_logged_in($current_user_id, $course_id, $course_mod);
-	} else {
-		$search_criteria = get_search_criteria_logged_out($email, $course_id, $course_mod);
+function sbma_mark_course_as_complete_redirect($entry, $form) {
+	if ($form['id'] != 11) {
+		return;
 	}
 
-	// Check for existing entries that match the search criteria
-	$dup_check = GFAPI::count_entries($form['id'], $search_criteria);
+	$is_logged_in = is_user_logged_in();
+	$post_type = get_post_type();
+	$contains_sfwd = strpos($post_type, 'sfwd') !== false;
 
-	// If more than one entry was found, mark the current entry as duplicate and delete it
-	if($dup_check > 1) {
-		GFAPI::update_entry_field($entry['id'], FIELD_ID_DUPLICATE, 'true');
-		GFAPI::delete_entry($entry['id']);
-		error_log( "GF Entry Deleted: " . $entry['id'] );
+	if ($is_logged_in && $contains_sfwd) {
+		$user_id = get_current_user_id();
+		$lesson_id = get_the_ID(); // Get LearnDash lesson ID
+
+		if ($lesson_id) {
+			// Mark lesson as complete for the user
+			if ( function_exists( 'learndash_process_mark_complete' ) ) {
+				learndash_process_mark_complete( $user_id, $lesson_id );
+				error_log( "Marked lesson " . $lesson_id . " as complete for user: " . $user_id );
+				$course_id = learndash_get_course_id(get_the_ID());
+				$completion_url = get_permalink($course_id); // Build the course completion URL
+				
+				// Set the confirmation to redirect to the course completion URL
+				$confirmation = array(
+					'redirect' => $completion_url,
+				);
+				return $confirmation;
+			} else {
+				// (No changes needed, the default confirmation will be used)
+				error_log( "learndash_process_mark_complete function not available" );
+			}
+		}
 	}
 }
-add_action('gform_after_submission_11', 'delete_duplicate_entry_v22', 10, 2);
-
-
-/**
- * Gravity Forms pre-submission filter for form ID 11.
- * Version: 1.16
- *
- * This function performs the following actions:
- * 1. Sanitizes the URL input parameters (lms_mod, lms_course_name, and lms_course_id).
- * 2. Defines a mapping of course names to course IDs.
- * 3. Retrieves the page ID, post type, and current user.
- * 4. Iterates through the form fields to set appropriate default values, validate, and correct input parameters.
- * 5. Returns the modified form.
- *
- * @param array $form The Gravity Forms form object.
- * @return array The modified form object.
- */
-function sbma_validate_reviews($form)
- {
-	 // Define field IDs
-	 $FIELD_LMS_COURSE_ID = 7; // Field ID 7 = Course ID
-	 $FIELD_USER_ID = 8; // Field ID 8 = User ID
-	 $FIELD_LMS_COURSE_NAME = 11; // Field ID 11 = Course Completed
-	 $FIELD_LMS_MOD = 13; // Field ID 13 = Method of Delivery
- 
-	 // Sanitize form input
-	 $lms_mod = trim(filter_input(INPUT_GET, 'lms_mod', FILTER_SANITIZE_STRING));
-	 $lms_mod = in_array($lms_mod, ['spo', 'lonl', 'lons']) ? $lms_mod : 'lons'; // Validate lms_mod
-	 $lms_course_name = trim(urldecode(filter_input(INPUT_GET, 'lms_course_name', FILTER_SANITIZE_STRING)));
-	 $lms_course_id = trim(filter_input(INPUT_GET, 'lms_course_id', FILTER_SANITIZE_NUMBER_INT));
- 
-	 // Define Course Name to Course ID mapping
-	 $course_mappings = array(
-		 "MS Excel Beginner Course" => 909,
-		 "MS Excel Intermediate Course" => 1221,
-		 "MS Excel Advanced Course" => 1548,
-		 "MS Excel Automation Course" => 1920,
-		 "MS Excel Foundation Course" => 6606,
-		 "MS Outlook Foundation Course" => 6248,
-		 "MS Windows Foundation Course" => 5349
-	 );
- 
-	 // Get the post ID/post type/user object
-	 $page_id = get_the_ID();
-	 $post_type = get_post_type();
-	 $user = wp_get_current_user();
- 
-	 // Validate page ID and post type
-	 if (empty($page_id) || empty($post_type)) {
-		 error_log("Page ID or Post Type is missing in sbma_validate_reviews.");
-	 }
- 
-	 // Loop through form fields
-	 try {
-		 foreach ($form['fields'] as &$field) {
-			 $field_value = '';
- 
-			 // Check if user is logged in and set the User ID
-			 if ($field->id == $FIELD_USER_ID && is_user_logged_in()) {
-				 $field_value = $user->ID;
-			 }
- 
-			 // Handle lms_mod
-			 if ($field->id == $FIELD_LMS_MOD) {
-				 $field_value = $lms_mod;
-			 }
- 
-			 // Validate and correct lms_course_id and lms_course_name
-			 if ($field->id == $FIELD_LMS_COURSE_NAME) {
-				 if (!empty($lms_course_name) && isset($course_mappings[$lms_course_name])) {
-					 $field_value = $lms_course_name; // Set the sanitized lms_course_name
-				 } elseif (empty($lms_course_name) && !empty($lms_course_id)) {
-					 $field_value = array_search($lms_course_id, $course_mappings); // Set lms_course_name based on lms_course_id
-				 }
-			 }
- 
-			 if ($field->id == $FIELD_LMS_COURSE_ID) {
-				 if (!empty($lms_course_name) && isset($course_mappings[$lms_course_name])) {
-					 $field_value = $course_mappings[$lms_course_name]; // Correct lms_course_id based on lms_course_name
-				 } elseif (!empty($lms_course_id)) {
-					 // Set lms_course_id if it's provided
-					 $field_value = $lms_course_id;
-				 }
-			 }
- 
-			 // Handle missing combinations of lms_course_name & lms_course_id
-			 if (empty($lms_course_name) && empty($lms_course_id) && !is_user_logged_in() && strpos($post_type, 'sfwd') === false) {
-				 $field_value = "MS Excel Beginner Course";
-				 $_POST["input_{$FIELD_LMS_COURSE_ID}"] = 909; // Set Course ID
-			 }
- 
-			 // Store the sanitized and validated values back to the $_POST array only if field value is not empty
-			 if (!empty($field_value)) {
-				 $_POST["input_{$field->id}"] = $field_value;
-			 }
-		 }
-	 } catch (Exception $e) {
-		 error_log("Exception caught in sbma_validate_reviews: " . $e->getMessage());
-	 }
- 
-	 return $form;
- }
- 
- // Hook the function to Gravity Forms pre-submission filter for form ID 11
- add_filter('gform_pre_submission_filter_11', 'sbma_validate_reviews');
-
-/* 
- Name: Mark lesson complete when Course Review is submitted
- Description: Mark the LearnDash Course that the logged in user is currently on as complete when
- they submit the course review form. Redirect the user to to the course completion URL.
- Version: 2.1  
- */
- 
- add_action( 'gform_after_submission_11', 'sbma_complete_lesson_on_form_submission', 20, 2 );
- function sbma_complete_lesson_on_form_submission( $entry, $form ) {
-	 // Check if user is logged in
-	 if ( ! is_user_logged_in() ) {
-		 error_log( "User not logged in" );
-		 return;
-	 }
- 
-	 // Get current user info
-	 $current_user = wp_get_current_user();
-	 $user_id = $current_user->ID;
-	 error_log( "User ID: " . $user_id );
- 
-	 // Check for current post type containing 'sfwd'
-	 $post_type = get_post_type();
-	 if ( strpos( $post_type, 'sfwd' ) !== false ) {
-		 // Get LearnDash lesson ID
-		 $lesson_id = get_the_ID();
-		 error_log( "Lesson ID: " . $lesson_id );
- 
-		 // Mark lesson as complete for the user
-		 if ( function_exists( 'learndash_process_mark_complete' ) ) {
-			 learndash_process_mark_complete( $user_id, $lesson_id );
-			 error_log( "Marked lesson as complete for user" );
-		 } else {
-			 error_log( "learndash_process_mark_complete function not available" );
-		 }
-	 } else {
-		 error_log( "Post type '{$post_type}' does not contain 'sfwd'" );
-	 }
-	 
-	 // Log the form field values
-	 error_log( "Mark Complete: Form field values at gform_after_submission hook: " . print_r( $entry, true ) );
- }
- 
- 
- add_filter('gform_confirmation_11', 'sbma_redirect_after_form_submission', 20, 4);
- function sbma_redirect_after_form_submission($confirmation, $form, $entry, $ajax) {
-	 // Get current post type
-	 $post_type = get_post_type();
- 
-	 // Check if the current post type is a LearnDash lesson
-	 if (strpos($post_type, 'sfwd') !== false) {
-		 // Pass the current post ID to get the correct course ID
-		 $course_id = learndash_get_course_id(get_the_ID());
- 
-		 // Build the course completion URL
-		 $completion_url = get_permalink($course_id);
- 
-		 // Set the confirmation to redirect to the course completion URL
-		 $confirmation = array(
-			 'redirect' => $completion_url,
-		 );
-	 } else {
-		 // If not on a LearnDash lesson page, use the default Gravity Forms confirmation
-		 // (No changes needed, the default confirmation will be used)
-	 }
- 
-	 return $confirmation;
- }
