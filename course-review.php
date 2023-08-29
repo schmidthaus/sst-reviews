@@ -62,19 +62,19 @@ function sbma_populate_fields($form) {
 		// Other fields when not on 'sfwd' pages
 		if (!$contains_sfwd) {
 			if ($is_logged_in) {
-				if ($field_id == 4.3) {
+				if ($field_id == 4.3) { // First Name field
 					$field->defaultValue = $current_user->user_firstname;
 				}
-				if ($field_id == 4.6) {
+				if ($field_id == 4.6) { // Last Name field
 					$field->defaultValue = $current_user->user_lastname;
 				}
-				if ($field_id == 5) {
+				if ($field_id == 5) {// Company field
 					$field->defaultValue = get_user_meta($current_user->ID, 'billing_company', true);
 				}
-				if ($field_id == 8) {
+				if ($field_id == 8) { // User ID field
 					$field->defaultValue = $current_user->ID;
 				}
-				if ($field_id == 17) {
+				if ($field_id == 17) { // Email field
 					$field->defaultValue = $current_user->user_email;
 				}
 			}
@@ -86,13 +86,13 @@ function sbma_populate_fields($form) {
 
 		// When on 'sfwd' pages
 		if ($contains_sfwd && $is_logged_in) {
-			if ($field_id == 7) {
+			if ($field_id == 7) { // Course ID field
 				$field->defaultValue = learndash_get_course_id();
 			}
-			if ($field_id == 11) {
+			if ($field_id == 11) { // Course ID field
 				$field->defaultValue = get_the_title(learndash_get_course_id());
 			}
-			if ($field_id == 13) {
+			if ($field_id == 13) { // Course MOD field
 				$field->defaultValue = 'spo';
 			}
 		}
