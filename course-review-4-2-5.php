@@ -1,7 +1,8 @@
 <?php
 // Version 4.2.6
 
-// Constants for Gravity Forms field IDs
+// Constants for Gravity Form and field IDs
+define('SBMA_GRAVITY_FORM', 11);
 define('SBMA_FIELD_ID_METHOD_OF_DELIVERY', 13);
 define('SBMA_FIELD_ID_COURSE_NAME', 11);
 define('SBMA_FIELD_ID_COURSE_ID', 7);
@@ -12,9 +13,9 @@ define('SBMA_FIELD_ID_USER_ID', 8);
 define('SBMA_FIELD_ID_EMAIL', 17);
 
 // Add filters and actions
-add_filter('gform_pre_render_11', 'sbma_populate_fields');
-add_filter('gform_validation_11', 'sbma_prevent_duplicate_entries');
-add_action('gform_after_submission_11', 'sbma_mark_course_as_complete_redirect', 10, 2);
+add_filter('gform_pre_render_'.SBMA_GRAVITY_FORM, 'sbma_populate_fields');
+add_filter('gform_validation_'.SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entries');
+add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_complete_redirect', 10, 2);
 
 /**
  * Populate Gravity Form fields with default values.
@@ -23,7 +24,7 @@ add_action('gform_after_submission_11', 'sbma_mark_course_as_complete_redirect',
  * @return array The modified form object.
  */
 function sbma_populate_fields($form) {
-	if ($form['id'] != 11) return $form;
+	if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
 	
 	$params = array_map('sanitize_text_field', $_GET);
 	$isLoggedIn = is_user_logged_in();
@@ -56,41 +57,41 @@ function sbma_populate_fields($form) {
 		$mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
 	
 		// Field 13: Method of Delivery
-		if ($field_id == 13) {
+		if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
 			$mod_value = $mod_mappings[$mod_from_url] ?? $mod_from_url;
 			$field->defaultValue = $mod_value;
 		}
 	
 		// Fields 11 and 7: Course Name and Course ID
-		if ($field_id == 11 || $field_id == 7) {
+		if ($field_id == SBMA_FIELD_ID_COURSE_NAME || $field_id == SBMA_FIELD_ID_COURSE_ID) {
 			$url_course_name_valid = isset($course_mappings[$course_name_from_url]);
 			$url_course_id_valid = in_array($course_id_from_url, $course_mappings);
 	
 			if ($url_course_name_valid && $url_course_id_valid && $course_mappings[$course_name_from_url] === $course_id_from_url) {
-				$field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_id_from_url;
+				$field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $course_id_from_url;
 			} elseif ($url_course_name_valid) {
-				$field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_mappings[$course_name_from_url];
+				$field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $course_mappings[$course_name_from_url];
 			} elseif ($url_course_id_valid) {
-				$field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $course_mappings) : $course_id_from_url;
+				$field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? array_search($course_id_from_url, $course_mappings) : $course_id_from_url;
 			}
 		}
 	
 		// Other fields when not on 'sfwd' pages
 		if (!$contains_sfwd) {
 			if ($is_logged_in) {
-				if ($field_id == 4.3) { // First Name field
+				if ($field_id == SBMA_FIELD_ID_FIRST_NAME) { // First Name field
 					$field->defaultValue = $current_user->user_firstname;
 				}
-				if ($field_id == 4.6) { // Last Name field
+				if ($field_id == SBMA_FIELD_ID_LAST_NAME) { // Last Name field
 					$field->defaultValue = $current_user->user_lastname;
 				}
-				if ($field_id == 5) {// Company field
+				if ($field_id == SBMA_FIELD_ID_COMPANY) {// Company field
 					$field->defaultValue = get_user_meta($current_user->ID, 'billing_company', true);
 				}
-				if ($field_id == 8) { // User ID field
+				if ($field_id == SBMA_FIELD_ID_USER_ID) { // User ID field
 					$field->defaultValue = $current_user->ID;
 				}
-				if ($field_id == 17) { // Email field
+				if ($field_id == SBMA_FIELD_ID_EMAIL) { // Email field
 					$field->defaultValue = $current_user->user_email;
 				}
 			}
@@ -102,13 +103,13 @@ function sbma_populate_fields($form) {
 	
 		// When on 'sfwd' pages
 		if ($contains_sfwd && $is_logged_in) {
-			if ($field_id == 7) { // Course ID field
+			if ($field_id == SBMA_FIELD_ID_COURSE_ID) { // Course ID field
 				$field->defaultValue = learndash_get_course_id();
 			}
-			if ($field_id == 11) { // Course ID field
+			if ($field_id == SBMA_FIELD_ID_COURSE_NAME) { // Course ID field
 				$field->defaultValue = get_the_title(learndash_get_course_id());
 			}
-			if ($field_id == 13) { // Course MOD field
+			if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) { // Course MOD field
 				$field->defaultValue = 'spo';
 			}
 		}
@@ -125,18 +126,18 @@ function sbma_populate_fields($form) {
  */
 function sbma_prevent_duplicate_entries($validationResult) {
 	$form = $validationResult['form'];
-	if ($form['id'] != 11) return $validationResult;
+	if ($form['id'] != SBMA_GRAVITY_FORM) return $validationResult;
 	
 	global $wpdb;
 	$isLoggedIn = is_user_logged_in();
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
-	$email = rgpost('input_17');
-	$courseId = rgpost('input_7');
-	$mod = rgpost('input_13');
+	$email = rgpost('input_'.SBMA_FIELD_ID_EMAIL);
+	$courseId = rgpost('input_'.SBMA_FIELD_ID_COURSE_ID);
+	$mod = rgpost('input_'.SBMA_FIELD_ID_METHOD_OF_DELIVERY);
 	
-	$where = $isLoggedIn ? $wpdb->prepare("meta_key = %s AND meta_value = %s", '_gform-entry-user-id', $currentUser->ID) : $wpdb->prepare("meta_key = %s AND meta_value = %s", '17', $email);
-	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", '7', $courseId);
-	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", '13', $mod);
+	$where = $isLoggedIn ? $wpdb->prepare("meta_key = %s AND meta_value = %s", '_gform-entry-user-id', $currentUser->ID) : $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_EMAIL, $email);
+	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_ID, $courseId);
+	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
 	
 	$query = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE {$where}";
 	$count = $wpdb->get_var($query);
@@ -152,13 +153,13 @@ function sbma_prevent_duplicate_entries($validationResult) {
 
 /**
  * Mark Course Complete.
- * Redirect user to Course completion page after form submission.
+ * Redirect user after form submission.
  *
  * @param array $entry The entry object.
  * @param array $form The form object.
  */
 function sbma_mark_course_as_complete_redirect($entry, $form) {
-	if ($form['id'] != 11) return;
+	if ($form['id'] != SBMA_GRAVITY_FORM) return;
 	
 	$isLoggedIn = is_user_logged_in();
 	$postType = get_post_type();
