@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.10
+// Version 4.2.11
 
 // Constants for Gravity Form and field IDs
 define('SBMA_GRAVITY_FORM', 11);
@@ -18,7 +18,8 @@ add_filter('gform_validation_'.SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entrie
 add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_complete_redirect', 10, 2);
 
 /**
- * Populate Gravity Form fields with URL Parameters, derived or default values.
+ * Conditionally populate Gravity Form fields
+ * with URL Parameters, derived or default values.
  *
  * @param array $form The form object.
  * @return array The modified form object.
@@ -52,7 +53,7 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 		$field_id = $field->id;
 
 		// If user is NOT on a LearnDash page, process URL parameters
-		if (!($isLoggedIn && $isSfwdPage) || ($isLoggedIn && !$isSfwdPage)) {
+		if ((!$isLoggedIn || $isLoggedIn) && !$isSfwdPage) {
 			 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
 			 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
 			 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
@@ -98,8 +99,7 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 		}
 		
 		// User is logged in, set user details
-		if ($isLoggedIn)) { 
-			// Other fields when not on 'sfwd' pages
+		if ($isLoggedIn)) {
 			if ($field_id == 4.3) { // First Name field
 				$field->defaultValue = $current_user->user_firstname;
 			}
