@@ -25,13 +25,13 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
  */
  function sbma_populate_fields($form) {
 	 if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
-	 
+
 	 $params = array_map('sanitize_text_field', $_GET);
 	 $isLoggedIn = is_user_logged_in();
 	 $currentUser = $isLoggedIn ? wp_get_current_user() : null;
 	 $postType = get_post_type();
 	 $isSfwdPage = strpos($postType, 'sfwd') !== false;
-	 
+
 	 $courseMappings = [
 		 "MS Excel Beginner Course" => 909,
 		 "MS Excel Intermediate Course" => 1221,
@@ -41,23 +41,23 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 		 "MS Outlook Foundation Course" => 6248,
 		 "MS Windows Foundation Course" => 5349
 	 ];
-	 
+
 	 $modMappings = [
 		 "Self-paced Online" => "spo",
 		 "Live Online" => "lonl",
 		 "Live Onsite" => "lons"
 	 ];
-	 
+
 	 foreach ($form['fields'] as &$field) {
-		 $field_id = $field->id;
- 
-		 // If user is NOT logged in OR form is NOT on a LearnDash page, process URL parameters
-		 if (!($isLoggedIn && $isSfwdPage)) {
+		$field_id = $field->id;
+
+		// If user is NOT on a LearnDash page, process URL parameters
+		if (!($isLoggedIn && $isSfwdPage) || ($isLoggedIn && !$isSfwdPage)) {
 			 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
 			 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
 			 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
 			 $mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
- 
+
 			 // Field 13: Method of Delivery
 			 if ($field_id == 13) {
 				 if (isset($modMappings[$mod_from_url])) {
@@ -68,22 +68,24 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 					 $field->defaultValue = 'lons';
 				 }
 			 }
- 
+
 			 // Fields 11 and 7: Course Name and Course ID
-			 if ($field_id == 11 || $field_id == 7) {
-				 $url_course_name_valid = isset($courseMappings[$course_name_from_url]);
-				 $url_course_id_valid = in_array($course_id_from_url, $courseMappings);
- 
-				 if ($url_course_name_valid && $url_course_id_valid && $courseMappings[$course_name_from_url] === $course_id_from_url) {
-					 $field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_id_from_url;
-				 } elseif ($url_course_name_valid) {
-					 $field->defaultValue = $field_id == 11 ? $course_name_from_url : $courseMappings[$course_name_from_url];
-				 } elseif ($url_course_id_valid) {
-					 $field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
-				 }
-			 }
-		 } else {
-			 // User is logged in and on a LearnDash page
+			if ($field_id == 11 || $field_id == 7) {
+				$url_course_name_valid = isset($courseMappings[$course_name_from_url]);
+				$url_course_id_valid = in_array($course_id_from_url, $courseMappings);
+			
+				if ($url_course_name_valid && $url_course_id_valid && $courseMappings[$course_name_from_url] === $course_id_from_url) {
+ 					$field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_id_from_url;
+				} elseif ($url_course_name_valid) {
+ 					$field->defaultValue = $field_id == 11 ? $course_name_from_url : $courseMappings[$course_name_from_url];
+				} elseif ($url_course_id_valid) {
+ 					$field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
+				}
+			}
+		}
+		
+		// User is logged in and on a LearnDash page, ignore URL parameters
+		if ($isLoggedIn && $isSfwdPage) { 
 			 if ($field_id == 13) {
 				 $field->defaultValue = 'spo';
 			 }
@@ -93,10 +95,30 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 			 if ($field_id == 7) {
 				 $field->defaultValue = learndash_get_course_id();
 			 }
-		 }
-	 }
-	 
-	 return $form;
+		}
+		
+		// User is logged in, set user details
+		if ($isLoggedIn)) { 
+			// Other fields when not on 'sfwd' pages
+			if ($field_id == 4.3) { // First Name field
+				$field->defaultValue = $current_user->user_firstname;
+			}
+			if ($field_id == 4.6) { // Last Name field
+				$field->defaultValue = $current_user->user_lastname;
+			}
+			if ($field_id == 5) {// Company field
+				$field->defaultValue = get_user_meta($current_user->ID, 'billing_company', true);
+			}
+			if ($field_id == 8) { // User ID field
+				$field->defaultValue = $current_user->ID;
+			}
+			if ($field_id == 17) { // Email field
+				$field->defaultValue = $current_user->user_email;
+			}
+		}
+	}
+
+	return $form;
  }
 
 /**
@@ -108,26 +130,26 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 function sbma_prevent_duplicate_entries($validationResult) {
 	$form = $validationResult['form'];
 	if ($form['id'] != SBMA_GRAVITY_FORM) return $validationResult;
-	
+
 	global $wpdb;
 	$isLoggedIn = is_user_logged_in();
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 	$email = rgpost('input_'.SBMA_FIELD_ID_EMAIL);
 	$courseId = rgpost('input_'.SBMA_FIELD_ID_COURSE_ID);
 	$mod = rgpost('input_'.SBMA_FIELD_ID_METHOD_OF_DELIVERY);
-	
+
 	$where = $isLoggedIn ? $wpdb->prepare("meta_key = %s AND meta_value = %s", '_gform-entry-user-id', $currentUser->ID) : $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_EMAIL, $email);
 	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_ID, $courseId);
 	$where .= $wpdb->prepare(" AND meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
-	
+
 	$query = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE {$where}";
 	$count = $wpdb->get_var($query);
-	
+
 	if ($count > 0) {
 		$validationResult['is_valid'] = false;
 		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 	}
-	
+
 	$validationResult['form'] = $form;
 	return $validationResult;
 }
@@ -141,7 +163,7 @@ function sbma_prevent_duplicate_entries($validationResult) {
  */
 function sbma_mark_course_as_complete_redirect($entry, $form) {
 	if ($form['id'] != SBMA_GRAVITY_FORM) return;
-	
+
 	$isLoggedIn = is_user_logged_in();
 	$postType = get_post_type();
 	$isSfwdPage = strpos($postType, 'sfwd') !== false;
