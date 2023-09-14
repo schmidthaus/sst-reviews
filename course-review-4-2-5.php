@@ -357,7 +357,7 @@ function sbma_mark_course_as_complete_redirect($entry, $form)
 	$courseId = rgar($entry, SBMA_FIELD_ID_COURSE_ID);
 
 	// Additional logic from v4.2.3
-	if ($is_logged_in && $contains_sfwd) {
+	if ($isLoggedIn && $isSfwdPage) {
 		$user_id = get_current_user_id();
 		$lesson_id = get_the_ID(); // Get LearnDash lesson ID
 
@@ -371,12 +371,12 @@ function sbma_mark_course_as_complete_redirect($entry, $form)
 						" as complete for user: " .
 						$user_id
 				);
-				$course_id = learndash_get_course_id(get_the_ID());
-				$completion_url = get_permalink($course_id); // Build the course completion URL
+				$courseId = learndash_get_course_id(get_the_ID());
+				$completionURL = get_permalink($courseId); // Build the course completion URL
 
 				// Set the confirmation to redirect to the course completion URL
 				$confirmation = [
-					"redirect" => $completion_url,
+					"redirect" => $completionURL,
 				];
 				return $confirmation;
 			} else {
