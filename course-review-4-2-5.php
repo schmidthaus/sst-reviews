@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.7
+// Version 4.2.8
 
 // Constants for Gravity Form and field IDs
 define('SBMA_GRAVITY_FORM', 11);
@@ -18,109 +18,89 @@ add_filter('gform_validation_'.SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entrie
 add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_complete_redirect', 10, 2);
 
 /**
- * Populate Gravity Form fields with default values.
+ * Populate Gravity Form fields with derived or default values.
  *
  * @param array $form The form object.
  * @return array The modified form object.
  */
-function sbma_populate_fields($form) {
- if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
+ function sbma_populate_fields($form) {
+	 if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
+	 
+	 $params = array_map('sanitize_text_field', $_GET);
+	 $isLoggedIn = is_user_logged_in();
+	 $currentUser = $isLoggedIn ? wp_get_current_user() : null;
+	 $postType = get_post_type();
+	 $isSfwdPage = strpos($postType, 'sfwd') !== false;
+	 
+	 $courseMappings = [
+		 "MS Excel Beginner Course" => 909,
+		 "MS Excel Intermediate Course" => 1221,
+		 "MS Excel Advanced Course" => 1548,
+		 "MS Excel Automation Course" => 1920,
+		 "MS Excel Foundation Course" => 6606,
+		 "MS Outlook Foundation Course" => 6248,
+		 "MS Windows Foundation Course" => 5349
+	 ];
+	 
+	 $modMappings = [
+		 "Self-paced Online" => "spo",
+		 "Live Online" => "lonl",
+		 "Live Onsite" => "lons"
+	 ];
+	 
+	 foreach ($form['fields'] as &$field) {
+		 $field_id = $field->id;
  
- $params = array_map('sanitize_text_field', $_GET);
- $isLoggedIn = is_user_logged_in();
- $currentUser = $isLoggedIn ? wp_get_current_user() : null;
- $postType = get_post_type();
- $isSfwdPage = strpos($postType, 'sfwd') !== false;
+		 // Conditions for processing URL parameters
+		 if (!($isLoggedIn && $isSfwdPage) || ($isLoggedIn && !$isSfwdPage)) {
+			 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
+			 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
+			 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
+			 $mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
  
- $courseMappings = [
-	 "MS Excel Beginner Course" => 909,
-	 "MS Excel Intermediate Course" => 1221,
-	 "MS Excel Advanced Course" => 1548,
-	 "MS Excel Automation Course" => 1920,
-	 "MS Excel Foundation Course" => 6606,
-	 "MS Outlook Foundation Course" => 6248,
-	 "MS Windows Foundation Course" => 5349
- ];
+			 // Field 13: Method of Delivery
+			 if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
+				 $mod_value = $modMappings[$mod_from_url] ?? $mod_from_url;
+				 $field->defaultValue = $mod_value;
+			 }
  
- $modMappings = [
-	 "Self-paced Online" => "spo",
-	 "Live Online" => "lonl",
-	 "Live Onsite" => "lons"
- ];
+			 // Fields 11 and 7: Course Name and Course ID
+			 if ($field_id == SBMA_FIELD_ID_COURSE_NAME || $field_id == SBMA_FIELD_ID_COURSE_ID) {
+				 $url_course_name_valid = isset($courseMappings[$course_name_from_url]);
+				 $url_course_id_valid = in_array($course_id_from_url, $courseMappings);
  
- foreach ($form['fields'] as &$field) {
-	 $field_id = $field->id;
-	 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
-	 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
-	 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
-	 $mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
+				 // Set lms_course_name from lms_course_id if lms_course_name is missing
+				 if (!$url_course_name_valid && $url_course_id_valid) {
+					 $course_name_from_url = array_search($course_id_from_url, $courseMappings);
+				 }
  
-	 // Field 13: Method of Delivery
-	 if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
-		 $mod_value = $modMappings[$mod_from_url] ?? $mod_from_url;
-		 $field->defaultValue = $mod_value;
-	 }
- 
-	 // Fields 11 and 7: Course Name and Course ID
-	 if ($field_id == SBMA_FIELD_ID_COURSE_NAME || $field_id == SBMA_FIELD_ID_COURSE_ID) {
-		 $url_course_name_valid = isset($courseMappings[$course_name_from_url]);
-		 $url_course_id_valid = in_array($course_id_from_url, $courseMappings);
- 
-		 // Set lms_course_name from lms_course_id if lms_course_name is missing
-		 if (!$url_course_name_valid && $url_course_id_valid) {
-			 $course_name_from_url = array_search($course_id_from_url, $courseMappings);
+				 if ($url_course_name_valid && $url_course_id_valid && $courseMappings[$course_name_from_url] === $course_id_from_url) {
+					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $course_id_from_url;
+				 } elseif ($url_course_name_valid) {
+					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $courseMappings[$course_name_from_url];
+				 } elseif ($url_course_id_valid) {
+					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
+				 }
+			 }
 		 }
  
-		 if ($url_course_name_valid && $url_course_id_valid && $courseMappings[$course_name_from_url] === $course_id_from_url) {
-			 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $course_id_from_url;
-		 } elseif ($url_course_name_valid) {
-			 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $courseMappings[$course_name_from_url];
-		 } elseif ($url_course_id_valid) {
-			 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
+		 // Continue processing fields based on existing logic
+		 if ($isLoggedIn && $isSfwdPage) {
+			 if ($field_id == SBMA_FIELD_ID_COURSE_NAME) {
+				 // Set the course name based on the current LearnDash course
+				 $field->defaultValue = get_the_title();
+			 }
+			 if ($field_id == SBMA_FIELD_ID_COURSE_ID) {
+				 $field->defaultValue = learndash_get_course_id();
+			 }
+			 if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
+				 $field->defaultValue = 'spo';
+			 }
 		 }
 	 }
-	
-	// Other fields when not on 'sfwd' pages
-	if (!$contains_sfwd) {
-		if ($is_logged_in) {
-			if ($field_id == SBMA_FIELD_ID_FIRST_NAME) { // First Name field
-				$field->defaultValue = $current_user->user_firstname;
-			}
-			if ($field_id == SBMA_FIELD_ID_LAST_NAME) { // Last Name field
-				$field->defaultValue = $current_user->user_lastname;
-			}
-			if ($field_id == SBMA_FIELD_ID_COMPANY) {// Company field
-				$field->defaultValue = get_user_meta($current_user->ID, 'billing_company', true);
-			}
-			if ($field_id == SBMA_FIELD_ID_USER_ID) { // User ID field
-				$field->defaultValue = $current_user->ID;
-			}
-			if ($field_id == SBMA_FIELD_ID_EMAIL) { // Email field
-				$field->defaultValue = $current_user->user_email;
-			}
-		}
-
-		if ($url_value !== null) {
-			$field->defaultValue = $url_value;
-		}
-	}
-
-	// When on 'sfwd' pages
-	if ($contains_sfwd && $is_logged_in) {
-		if ($field_id == SBMA_FIELD_ID_COURSE_ID) { // Course ID field
-			$field->defaultValue = learndash_get_course_id();
-		}
-		if ($field_id == SBMA_FIELD_ID_COURSE_NAME) { // Course ID field
-			$field->defaultValue = get_the_title(learndash_get_course_id());
-		}
-		if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) { // Course MOD field
-			$field->defaultValue = 'spo';
-		}
-	}
-	}
-	
-	return $form;
-}
+	 
+	 return $form;
+ }
 
 /**
  * Prevent duplicate entries in Gravity Forms.
