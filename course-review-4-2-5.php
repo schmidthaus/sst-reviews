@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.8
+// Version 4.2.9
 
 // Constants for Gravity Form and field IDs
 define('SBMA_GRAVITY_FORM', 11);
@@ -18,7 +18,7 @@ add_filter('gform_validation_'.SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entrie
 add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_complete_redirect', 10, 2);
 
 /**
- * Populate Gravity Form fields with derived or default values.
+ * Populate Gravity Form fields with URL Parameters, derived or default values.
  *
  * @param array $form The form object.
  * @return array The modified form object.
@@ -51,50 +51,47 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 	 foreach ($form['fields'] as &$field) {
 		 $field_id = $field->id;
  
-		 // Conditions for processing URL parameters
-		 if (!($isLoggedIn && $isSfwdPage) || ($isLoggedIn && !$isSfwdPage)) {
+		 // If user is NOT logged in OR form is NOT on a LearnDash page, process URL parameters
+		 if (!($isLoggedIn && $isSfwdPage)) {
 			 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
 			 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
 			 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
 			 $mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
  
 			 // Field 13: Method of Delivery
-			 if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
-				 $mod_value = $modMappings[$mod_from_url] ?? $mod_from_url;
-				 $field->defaultValue = $mod_value;
+			 if ($field_id == 13) {
+				 if (isset($modMappings[$mod_from_url])) {
+					 $field->defaultValue = $modMappings[$mod_from_url];
+				 } elseif ($isLoggedIn) {
+					 $field->defaultValue = 'lonl';
+				 } else {
+					 $field->defaultValue = 'lons';
+				 }
 			 }
  
 			 // Fields 11 and 7: Course Name and Course ID
-			 if ($field_id == SBMA_FIELD_ID_COURSE_NAME || $field_id == SBMA_FIELD_ID_COURSE_ID) {
+			 if ($field_id == 11 || $field_id == 7) {
 				 $url_course_name_valid = isset($courseMappings[$course_name_from_url]);
 				 $url_course_id_valid = in_array($course_id_from_url, $courseMappings);
  
-				 // Set lms_course_name from lms_course_id if lms_course_name is missing
-				 if (!$url_course_name_valid && $url_course_id_valid) {
-					 $course_name_from_url = array_search($course_id_from_url, $courseMappings);
-				 }
- 
 				 if ($url_course_name_valid && $url_course_id_valid && $courseMappings[$course_name_from_url] === $course_id_from_url) {
-					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $course_id_from_url;
+					 $field->defaultValue = $field_id == 11 ? $course_name_from_url : $course_id_from_url;
 				 } elseif ($url_course_name_valid) {
-					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? $course_name_from_url : $courseMappings[$course_name_from_url];
+					 $field->defaultValue = $field_id == 11 ? $course_name_from_url : $courseMappings[$course_name_from_url];
 				 } elseif ($url_course_id_valid) {
-					 $field->defaultValue = $field_id == SBMA_FIELD_ID_COURSE_NAME ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
+					 $field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
 				 }
 			 }
-		 }
- 
-		 // Continue processing fields based on existing logic
-		 if ($isLoggedIn && $isSfwdPage) {
-			 if ($field_id == SBMA_FIELD_ID_COURSE_NAME) {
-				 // Set the course name based on the current LearnDash course
+		 } else {
+			 // User is logged in and on a LearnDash page
+			 if ($field_id == 13) {
+				 $field->defaultValue = 'spo';
+			 }
+			 if ($field_id == 11) {
 				 $field->defaultValue = get_the_title();
 			 }
-			 if ($field_id == SBMA_FIELD_ID_COURSE_ID) {
+			 if ($field_id == 7) {
 				 $field->defaultValue = learndash_get_course_id();
-			 }
-			 if ($field_id == SBMA_FIELD_ID_METHOD_OF_DELIVERY) {
-				 $field->defaultValue = 'spo';
 			 }
 		 }
 	 }
