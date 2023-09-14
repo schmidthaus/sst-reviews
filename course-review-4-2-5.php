@@ -25,52 +25,52 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
  * @return array The modified form object.
  */
  function sbma_populate_fields($form) {
-	 if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
-
-	 $params = array_map('sanitize_text_field', $_GET);
-	 $isLoggedIn = is_user_logged_in();
-	 $currentUser = $isLoggedIn ? wp_get_current_user() : null;
-	 $postType = get_post_type();
-	 $isSfwdPage = strpos($postType, 'sfwd') !== false;
-
-	 $courseMappings = [
-		 "MS Excel Beginner Course" => 909,
-		 "MS Excel Intermediate Course" => 1221,
-		 "MS Excel Advanced Course" => 1548,
-		 "MS Excel Automation Course" => 1920,
-		 "MS Excel Foundation Course" => 6606,
-		 "MS Outlook Foundation Course" => 6248,
-		 "MS Windows Foundation Course" => 5349
-	 ];
-
-	 $modMappings = [
-		 "Self-paced Online" => "spo",
-		 "Live Online" => "lonl",
-		 "Live Onsite" => "lons"
-	 ];
-
-	 foreach ($form['fields'] as &$field) {
+	if ($form['id'] != SBMA_GRAVITY_FORM) return $form;
+	
+	$params = array_map('sanitize_text_field', $_GET);
+	$isLoggedIn = is_user_logged_in();
+	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
+	$postType = get_post_type();
+	$isSfwdPage = strpos($postType, 'sfwd') !== false;
+	
+	$courseMappings = [
+		"MS Excel Beginner Course" => 909,
+		"MS Excel Intermediate Course" => 1221,
+		"MS Excel Advanced Course" => 1548,
+		"MS Excel Automation Course" => 1920,
+		"MS Excel Foundation Course" => 6606,
+		"MS Outlook Foundation Course" => 6248,
+		"MS Windows Foundation Course" => 5349
+	];
+	
+	$modMappings = [
+ 		"Self-paced Online" => "spo",
+ 		"Live Online" => "lonl",
+ 		"Live Onsite" => "lons"
+	];
+	
+	foreach ($form['fields'] as &$field) {
 		$field_id = $field->id;
 
 		// If user is NOT on a LearnDash page, process URL parameters
 		if ((!$isLoggedIn || $isLoggedIn) && !$isSfwdPage) {
-			 $url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
-			 $course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
-			 $course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
-			 $mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
+			$url_value = isset($params["field_$field_id"]) ? $params["field_$field_id"] : null;
+			$course_name_from_url = isset($params['lms_course_name']) ? $params['lms_course_name'] : null;
+			$course_id_from_url = isset($params['lms_course_id']) ? (int) $params['lms_course_id'] : null;
+			$mod_from_url = isset($params['lms_mod']) ? $params['lms_mod'] : null;
 
-			 // Field 13: Method of Delivery
-			 if ($field_id == 13) {
-				 if (isset($modMappings[$mod_from_url])) {
-					 $field->defaultValue = $modMappings[$mod_from_url];
-				 } elseif ($isLoggedIn) {
-					 $field->defaultValue = 'lonl';
-				 } else {
-					 $field->defaultValue = 'lons';
-				 }
-			 }
-
-			 // Fields 11 and 7: Course Name and Course ID
+		// Field 13: Method of Delivery
+		if ($field_id == 13) {
+			if (isset($modMappings[$mod_from_url])) {
+				$field->defaultValue = $modMappings[$mod_from_url];
+			} elseif ($isLoggedIn) {
+				$field->defaultValue = 'lonl';
+			} else {
+				$field->defaultValue = 'lons';
+			}
+		}
+		
+		// Fields 11 and 7: Course Name and Course ID
 			if ($field_id == 11 || $field_id == 7) {
 				$url_course_name_valid = isset($courseMappings[$course_name_from_url]);
 				$url_course_id_valid = in_array($course_id_from_url, $courseMappings);
@@ -81,6 +81,73 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
  					$field->defaultValue = $field_id == 11 ? $course_name_from_url : $courseMappings[$course_name_from_url];
 				} elseif ($url_course_id_valid) {
  					$field->defaultValue = $field_id == 11 ? array_search($course_id_from_url, $courseMappings) : $course_id_from_url;
+				} else {
+					// Edge cases: Invalid or non-matching course name and ID
+					if ($field_id == 11) {
+						$field->isRequired = true;
+						$field->errorMessage = "Please select a valid course from the list.";
+						$field->visibility = "visible";
+					}
+					// Output the client-side script within a <script> tag
+					$script = "
+						<script>
+							jQuery(document).ready(function($) {
+								// Hardcoded courseMappings array
+								var courseMappings = {
+									'MS Excel Beginner Course': 909,
+									'MS Excel Intermediate Course': 1221,
+									'MS Excel Advanced Course': 1548,
+									'MS Excel Automation Course': 1920,
+									'MS Excel Foundation Course': 6606,
+									'MS Outlook Foundation Course': 6248,
+									'MS Windows Foundation Course': 5349
+								};
+					
+								// Select the node (the <li> containing the field) that will be observed for mutations
+								var targetNode = $('select[name=\"input_11\"]').closest('li');
+					
+								// Options for the observer (which mutations to observe)
+								var config = { attributes: true, attributeFilter: ['class'] };
+					
+								// Callback function to execute when mutations are observed
+								var callback = function(mutationsList, observer) {
+									for(var mutation of mutationsList) {
+										if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+											if (!$(mutation.target).hasClass('gf_hidden')) {
+												// The field has become visible
+												attachChangeListener();
+											}
+										}
+									}
+								};
+					
+								// Create an observer instance linked to the callback function
+								var observer = new MutationObserver(callback);
+					
+								// Start observing the target node for configured mutations
+								observer.observe(targetNode[0], config);
+					
+								function attachChangeListener() {
+									// Listen for changes on the Course Name field
+									$('select[name=\"input_11\"]').change(function() {
+										var selectedCourseName = $(this).val();
+										var correspondingCourseID = courseMappings[selectedCourseName];
+					
+										// Populate the Course ID field
+										if (correspondingCourseID) {
+											$('input[name=\"input_7\"]').val(correspondingCourseID);
+										} else {
+											// Handle cases where the course name is not in the mappings
+											$('input[name=\"input_7\"]').val('Invalid Course ID');
+										}
+									});
+								}
+							});
+						</script>
+					";
+					
+					// Output the script
+					echo $script;
 				}
 			}
 		}
@@ -99,7 +166,7 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 		}
 		
 		// User is logged in, set user details
-		if ($isLoggedIn)) {
+		if ($isLoggedIn) {
 			if ($field_id == 4.3) { // First Name field
 				$field->defaultValue = $current_user->user_firstname;
 			}
