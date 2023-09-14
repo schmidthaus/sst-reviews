@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.12
+// Version 4.2.13
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -39,10 +39,27 @@ function sbma_populate_fields($form)
 	}
 
 	$params = array_map("sanitize_text_field", $_GET);
-	$isLoggedIn = is_user_logged_in();
-	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 	$postType = get_post_type();
 	$isSfwdPage = strpos($postType, "sfwd") !== false;
+	
+	// Check if the is_user_logged_in() function exists
+	if (function_exists('is_user_logged_in')) {
+		// The is_user_logged_in() function is available
+		$isLoggedIn = is_user_logged_in();
+	} else {
+		// The is_user_logged_in() function is not available
+		// Use alternative method to determine $isLoggedIn
+	
+		// Check if a user is logged in using the global $current_user object
+		global $current_user;
+		get_currentuserinfo();
+	
+		$isLoggedIn = ($current_user->ID > 0);
+	}
+	
+	// Now $isLoggedIn contains the appropriate value
+	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
+
 
 	/**	$courseMappings = [
 		"MS Excel Beginner Course" => 909,
