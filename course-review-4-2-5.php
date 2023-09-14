@@ -336,8 +336,22 @@ function sbma_mark_course_as_complete_redirect($entry, $form)
 	if ($form["id"] != SBMA_GRAVITY_FORM) {
 		return;
 	}
+	
+	// Check if the is_user_logged_in() function exists
+	if (function_exists('is_user_logged_in')) {
+		// The is_user_logged_in() function is available
+		$isLoggedIn = is_user_logged_in();
+	} else {
+		// The is_user_logged_in() function is not available
+		// Use alternative method to determine $isLoggedIn
+	
+		// Check if a user is logged in using the global $current_user object
+		global $current_user;
+		get_currentuserinfo();
+	
+		$isLoggedIn = ($current_user->ID > 0);
+	}
 
-	$isLoggedIn = is_user_logged_in();
 	$postType = get_post_type();
 	$isSfwdPage = strpos($postType, "sfwd") !== false;
 	$courseId = rgar($entry, SBMA_FIELD_ID_COURSE_ID);
