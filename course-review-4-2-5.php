@@ -154,15 +154,17 @@ add_action('gform_after_submission_'.SBMA_GRAVITY_FORM, 'sbma_mark_course_as_com
 		
 		// User is logged in and on a LearnDash page, ignore URL parameters
 		if ($isLoggedIn && $isSfwdPage) { 
-			 if ($field_id == 13) {
-				 $field->defaultValue = 'spo';
-			 }
-			 if ($field_id == 11) {
-				 $field->defaultValue = get_the_title();
-			 }
-			 if ($field_id == 7) {
-				 $field->defaultValue = learndash_get_course_id();
-			 }
+			$learndash_course_id = learndash_get_course_id();
+			$learndash_course_name = get_the_title($learndash_course_id);
+			if ($field_id == 13) {
+				$field->defaultValue = 'spo';
+			}
+			if ($field_id == 11) {
+				$field->defaultValue = $learndash_course_name;
+			}
+			if ($field_id == 7) {
+				$field->defaultValue = $learndash_course_id;
+			}
 		}
 		
 		// User is logged in, set user details
