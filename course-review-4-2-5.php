@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.9
+// Version 4.2.10
 
 // Constants for Gravity Form and field IDs
 define('SBMA_GRAVITY_FORM', 11);
