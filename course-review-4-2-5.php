@@ -25,6 +25,31 @@ add_action(
 add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
 
 /**
+ * Utility to check if Wordpress user
+ * is logged in.
+ *
+ * @return true (if the user is logged in) or false (if the user is not logged in).
+ */
+function sbma_is_user_logged_in() {
+	if (function_exists('is_user_logged_in')) {
+		// The is_user_logged_in() function is available
+		error_log("The is_user_logged_in() function is available.");
+		$isLoggedIn = (bool) is_user_logged_in();
+	} else {
+		// The is_user_logged_in() function is not available
+		// Use alternative method to determine $isLoggedIn
+		error_log("The is_user_logged_in() function is not available. Use alternative method.");
+	
+		// Check if a user is logged in using the global $current_user object
+		global $current_user;
+		get_currentuserinfo();
+	
+		$isLoggedIn = ($current_user->ID > 0) ? true : false;
+	}
+	return $isLoggedIn;
+}
+
+/**
  * Conditionally populate Gravity Form fields
  * with URL Parameters, derived or default values.
  *
@@ -43,25 +68,10 @@ function sbma_populate_fields($form)
 	$params = array_map("sanitize_text_field", $_GET);
 	$postType = get_post_type();
 	$isSfwdPage = strpos($postType, "sfwd") !== false;
-	
-	// Check if the is_user_logged_in() function exists
-	if (function_exists('is_user_logged_in')) {
-		// The is_user_logged_in() function is available
-		error_log("The is_user_logged_in() function is available.");
-		$isLoggedIn = is_user_logged_in();
-	} else {
-		// The is_user_logged_in() function is not available
-		// Use alternative method to determine $isLoggedIn
-		error_log("The is_user_logged_in() function is not available. Use alternative method.");
-	
-		// Check if a user is logged in using the global $current_user object
-		global $current_user;
-		get_currentuserinfo();
-	
-		$isLoggedIn = ($current_user->ID > 0);
-	}
-	
+	$isLoggedIn = sbma_is_user_logged_in();
+
 	// Now $isLoggedIn contains the appropriate value
+	$current_user = null;
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 		
 	error_log("URL Parameters: " .json_encode($params));
@@ -69,16 +79,6 @@ function sbma_populate_fields($form)
 	error_log("Is LearnDash page: $isSfwdPage");
 	error_log("Is User Logged In: $isLoggedIn");
 	//error_log("Current User ID: $currentUser");
-
-	/**	$courseMappings = [
-		"MS Excel Beginner Course" => 909,
-		"MS Excel Intermediate Course" => 1221,
-		"MS Excel Advanced Course" => 1548,
-		"MS Excel Automation Course" => 1920,
-		"MS Excel Foundation Course" => 6606,
-		"MS Outlook Foundation Course" => 6248,
-		"MS Windows Foundation Course" => 5349
-	]; **/
 
 	// Populate the $courseMappings array with published courses and course id's
 	$learndash_course_args = [
@@ -310,6 +310,7 @@ function sbma_prevent_duplicate_entries($validationResult)
 	
 	global $wpdb;
 	// Check if the is_user_logged_in() function exists
+	// FIXME Use sbma_is_user_logged_in()
 	if (function_exists('is_user_logged_in')) {
 		// The is_user_logged_in() function is available
 		$isLoggedIn = is_user_logged_in();
@@ -423,6 +424,7 @@ function sbma_mark_course_as_complete_redirect($entry, $form)
 	}
 	
 	// Check if the is_user_logged_in() function exists
+	// FIXME Use sbma_is_user_logged_in()
 	if (function_exists('is_user_logged_in')) {
 		// The is_user_logged_in() function is available
 		$isLoggedIn = is_user_logged_in();
