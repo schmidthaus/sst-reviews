@@ -340,6 +340,7 @@ function sbma_prevent_duplicate_entries($validationResult)
 				$field->defaultValue = true;
 			}
 		}
+		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 		error_log("Duplicate entry detected. Setting SBMA_FIELD_IS_DUPLICATE to true.");
 	} else {
 		// If no duplicates, ensure the SBMA_FIELD_IS_DUPLICATE field value is false
