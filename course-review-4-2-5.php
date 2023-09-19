@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.19
+// Version 4.2.20
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -11,6 +11,7 @@ define("SBMA_FIELD_ID_LAST_NAME", 4.6);
 define("SBMA_FIELD_ID_COMPANY", 5);
 define("SBMA_FIELD_ID_USER_ID", 8);
 define("SBMA_FIELD_ID_EMAIL", 17);
+define("SBMA_FIELD_IS_DUPLICATE", 19);
 
 // Add filters and actions
 add_filter("gform_pre_render_" . SBMA_GRAVITY_FORM, "sbma_populate_fields");
