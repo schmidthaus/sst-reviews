@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.21
+// Version 4.2.23
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -15,16 +15,14 @@ define("SBMA_FIELD_IS_DUPLICATE", 19);
 
 // Add filters and actions
 add_filter("gform_pre_render_" . SBMA_GRAVITY_FORM, "sbma_populate_fields");
-add_filter(
-	"gform_validation_" . SBMA_GRAVITY_FORM,
-	"sbma_prevent_duplicate_entries"
-);
+add_action("gform_pre_submission_" . SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entries');
 add_action(
 	"gform_after_submission_" . SBMA_GRAVITY_FORM,
 	"sbma_mark_course_as_complete_redirect",
 	10,
 	2
 );
+add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
 
 /**
  * Conditionally populate Gravity Form fields
@@ -354,6 +352,19 @@ function sbma_prevent_duplicate_entries($validationResult)
 	$validationResult["form"] = $form;
 	error_log("Exiting sbma_prevent_duplicate_entries function.");
 	return $validationResult;
+}
+
+/**
+ * Duplicate entry message in Gravity Forms.
+ *
+ * @param array $confirmation The form confirmation message object.
+ * @return array The modified confirmation message result object.
+ */
+function sbma_duplicate_custom_confirmation($confirmation, $form, $entry, $ajax) {
+	if ($entry[SBMA_FIELD_IS_DUPLICATE] == true) {
+		$confirmation = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
+	}
+	return $confirmation;
 }
 
 /**
