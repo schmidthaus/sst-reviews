@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.14
+// Version 4.2.15
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -302,19 +302,23 @@ function sbma_prevent_duplicate_entries($validationResult)
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 	$email = rgpost("input_" . SBMA_FIELD_ID_EMAIL);
 	$courseId = rgpost("input_" . SBMA_FIELD_ID_COURSE_ID);
+	$courseName = rgpost("input_" . SBMA_FIELD_ID_COURSE_NAME);
 	$mod = rgpost("input_" . SBMA_FIELD_ID_METHOD_OF_DELIVERY);
-
-	$where = $isLoggedIn
-		? $wpdb->prepare(
+	
+	if ($isLoggedIn) {
+		$where = $wpdb->prepare(
 			"meta_key = %s AND meta_value = %s",
 			"_gform-entry-user-id",
 			$currentUser->ID
-		)
-		: $wpdb->prepare(
+		);
+	} else {
+		$where = $wpdb->prepare(
 			"meta_key = %s AND meta_value = %s",
 			SBMA_FIELD_ID_EMAIL,
 			$email
 		);
+	}
+	
 	$where .= $wpdb->prepare(
 		" AND meta_key = %s AND meta_value = %s",
 		SBMA_FIELD_ID_COURSE_ID,
@@ -322,19 +326,24 @@ function sbma_prevent_duplicate_entries($validationResult)
 	);
 	$where .= $wpdb->prepare(
 		" AND meta_key = %s AND meta_value = %s",
+		SBMA_FIELD_ID_COURSE_NAME,
+		$courseName
+	);
+	$where .= $wpdb->prepare(
+		" AND meta_key = %s AND meta_value = %s",
 		SBMA_FIELD_ID_METHOD_OF_DELIVERY,
 		$mod
 	);
-
+	
 	$query = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE {$where}";
 	$count = $wpdb->get_var($query);
-
+	
 	if ($count > 0) {
 		$validationResult["is_valid"] = false;
 		$form["confirmation"]["message"] =
 			"<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>";
 	}
-
+	
 	$validationResult["form"] = $form;
 	return $validationResult;
 }
