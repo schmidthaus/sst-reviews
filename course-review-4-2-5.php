@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.17
+// Version 4.2.18
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -313,28 +313,19 @@ function sbma_prevent_duplicate_entries($validationResult)
 	error_log("Course Name: $courseName");
 	error_log("Method of Delivery: $mod");
 
-	$baseQuery = "SELECT entry_id FROM {$wpdb->prefix}gf_entry_meta WHERE ";
+	$baseQuery = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE ";
 	
 	if ($isLoggedIn) {
 		$userCondition = $wpdb->prepare("meta_key = '_gform-entry-user-id' AND meta_value = %s", $currentUser->ID);
 	} else {
-		$userCondition = $wpdb->prepare("meta_key = '%s' AND meta_value = %s", SBMA_FIELD_ID_EMAIL, $email);
+		$userCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_EMAIL, $email);
 	}
 	
-	$courseIdCondition = $wpdb->prepare("meta_key = '%s' AND meta_value = %s", SBMA_FIELD_ID_COURSE_ID, $courseId);
-	$courseNameCondition = $wpdb->prepare("meta_key = '%s' AND meta_value = %s", SBMA_FIELD_ID_COURSE_NAME, $courseName);
-	$modCondition = $wpdb->prepare("meta_key = '%s' AND meta_value = %s", SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
+	$courseIdCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_ID, $courseId);
+	$courseNameCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_NAME, $courseName);
+	$modCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
 	
-	$query = "
-		SELECT COUNT(*) 
-		FROM {$wpdb->prefix}gf_entry_meta main 
-		WHERE EXISTS ({$baseQuery} {$userCondition})
-		AND EXISTS ({$baseQuery} {$courseIdCondition})
-		AND EXISTS ({$baseQuery} {$courseNameCondition})
-		AND EXISTS ({$baseQuery} {$modCondition})
-		AND main.entry_id = entry_id
-	";
-	
+	$query = $baseQuery . $userCondition . " AND " . $courseIdCondition . " AND " . $courseNameCondition . " AND " . $modCondition;
 	error_log("SQL Query: $query");
 	
 	$count = $wpdb->get_var($query);
@@ -347,7 +338,6 @@ function sbma_prevent_duplicate_entries($validationResult)
 	}
 	
 	$validationResult["form"] = $form;
-	
 	error_log("Exiting sbma_prevent_duplicate_entries function.");
 	
 	return $validationResult;
