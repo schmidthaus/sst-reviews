@@ -283,7 +283,22 @@ function sbma_prevent_duplicate_entries($validationResult)
 	}
 
 	global $wpdb;
-	$isLoggedIn = is_user_logged_in();
+	// Check if the is_user_logged_in() function exists
+	if (function_exists('is_user_logged_in')) {
+		// The is_user_logged_in() function is available
+		$isLoggedIn = is_user_logged_in();
+	} else {
+		// The is_user_logged_in() function is not available
+		// Use alternative method to determine $isLoggedIn
+	
+		// Check if a user is logged in using the global $current_user object
+		global $current_user;
+		get_currentuserinfo();
+	
+		$isLoggedIn = ($current_user->ID > 0);
+	}
+	
+	// Now $isLoggedIn contains the appropriate value
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 	$email = rgpost("input_" . SBMA_FIELD_ID_EMAIL);
 	$courseId = rgpost("input_" . SBMA_FIELD_ID_COURSE_ID);
