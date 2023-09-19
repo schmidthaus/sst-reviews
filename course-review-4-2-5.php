@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.26
+// Version 4.2.28
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -22,7 +22,7 @@ add_action(
 	10,
 	2
 );
-//add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
+add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
 
 /**
  * Conditionally populate Gravity Form fields
@@ -89,180 +89,184 @@ function sbma_populate_fields($form)
 		"Live Online" => "lonl",
 		"Live Onsite" => "lons",
 	];
-
-	foreach ($form["fields"] as &$field) {
-		$field_id = $field->id;
-
-		// If user is NOT on a LearnDash page, process URL parameters
-		if ((!$isLoggedIn || $isLoggedIn) && !$isSfwdPage) {
-			$url_value = isset($params["field_$field_id"])
-				? $params["field_$field_id"]
-				: null;
-			$course_name_from_url = isset($params["lms_course_name"])
-				? $params["lms_course_name"]
-				: null;
-			$course_id_from_url = isset($params["lms_course_id"])
-				? (int) $params["lms_course_id"]
-				: null;
-			$mod_from_url = isset($params["lms_mod"])
-				? $params["lms_mod"]
-				: null;
-
-			// Field 13: Method of Delivery
-			if ($field_id == 13) {
-				if (isset($modMappings[$mod_from_url])) {
-					$field->defaultValue = $modMappings[$mod_from_url];
-				} elseif ($isLoggedIn) {
-					$field->defaultValue = "lonl";
-				} else {
-					$field->defaultValue = "lons";
-				}
-			}
-
-			// Fields 11 and 7: Course Name and Course ID
-			if ($field_id == 11 || $field_id == 7) {
-				$url_course_name_valid = isset(
-					$courseMappings[$course_name_from_url]
-				);
-				$url_course_id_valid = in_array(
-					$course_id_from_url,
-					$courseMappings
-				);
-
-				if (
-					$url_course_name_valid &&
-					$url_course_id_valid &&
-					$courseMappings[$course_name_from_url] ===
-						$course_id_from_url
-				) {
-					$field->defaultValue =
-						$field_id == 11
-							? $course_name_from_url
-							: $course_id_from_url;
-				} elseif ($url_course_name_valid) {
-					$field->defaultValue =
-						$field_id == 11
-							? $course_name_from_url
-							: $courseMappings[$course_name_from_url];
-				} elseif ($url_course_id_valid) {
-					$field->defaultValue =
-						$field_id == 11
-							? array_search($course_id_from_url, $courseMappings)
-							: $course_id_from_url;
-				} else {
-					// Edge cases: Invalid or non-matching course name and ID
-					if ($field_id == 11) {
-						$field->isRequired = true;
-						$field->errorMessage =
-							"Please select a valid course from the list.";
-						$field->visibility = "visible";
+	
+	try {
+		foreach ($form["fields"] as &$field) {
+			$field_id = $field->id;
+	
+			// If user is NOT on a LearnDash page, process URL parameters
+			if ((!$isLoggedIn || $isLoggedIn) && !$isSfwdPage) {
+				$url_value = isset($params["field_$field_id"])
+					? $params["field_$field_id"]
+					: null;
+				$course_name_from_url = isset($params["lms_course_name"])
+					? $params["lms_course_name"]
+					: null;
+				$course_id_from_url = isset($params["lms_course_id"])
+					? (int) $params["lms_course_id"]
+					: null;
+				$mod_from_url = isset($params["lms_mod"])
+					? $params["lms_mod"]
+					: null;
+	
+				// Field 13: Method of Delivery
+				if ($field_id == 13) {
+					if (isset($modMappings[$mod_from_url])) {
+						$field->defaultValue = $modMappings[$mod_from_url];
+					} elseif ($isLoggedIn) {
+						$field->defaultValue = "lonl";
+					} else {
+						$field->defaultValue = "lons";
 					}
-					// Output the client-side script within a <script> tag
-					$script = "
-						<script>
-							jQuery(document).ready(function($) {
-								// Hardcoded courseMappings array
-								var courseMappings = {
-									'MS Excel Beginner Course': 909,
-									'MS Excel Intermediate Course': 1221,
-									'MS Excel Advanced Course': 1548,
-									'MS Excel Automation Course': 1920,
-									'MS Excel Foundation Course': 6606,
-									'MS Outlook Foundation Course': 6248,
-									'MS Windows Foundation Course': 5349
-								};
-					
-								// Select the node (the <li> containing the field) that will be observed for mutations
-								var targetNode = $('select[name=\"input_11\"]').closest('li');
-					
-								// Options for the observer (which mutations to observe)
-								var config = { attributes: true, attributeFilter: ['class'] };
-					
-								// Callback function to execute when mutations are observed
-								var callback = function(mutationsList, observer) {
-									for(var mutation of mutationsList) {
-										if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-											if (!$(mutation.target).hasClass('gf_hidden')) {
-												// The field has become visible
-												attachChangeListener();
+				}
+	
+				// Fields 11 and 7: Course Name and Course ID
+				if ($field_id == 11 || $field_id == 7) {
+					$url_course_name_valid = isset(
+						$courseMappings[$course_name_from_url]
+					);
+					$url_course_id_valid = in_array(
+						$course_id_from_url,
+						$courseMappings
+					);
+	
+					if (
+						$url_course_name_valid &&
+						$url_course_id_valid &&
+						$courseMappings[$course_name_from_url] ===
+							$course_id_from_url
+					) {
+						$field->defaultValue =
+							$field_id == 11
+								? $course_name_from_url
+								: $course_id_from_url;
+					} elseif ($url_course_name_valid) {
+						$field->defaultValue =
+							$field_id == 11
+								? $course_name_from_url
+								: $courseMappings[$course_name_from_url];
+					} elseif ($url_course_id_valid) {
+						$field->defaultValue =
+							$field_id == 11
+								? array_search($course_id_from_url, $courseMappings)
+								: $course_id_from_url;
+					} else {
+						// Edge cases: Invalid or non-matching course name and ID
+						if ($field_id == 11) {
+							$field->isRequired = true;
+							$field->errorMessage =
+								"Please select a valid course from the list.";
+							$field->visibility = "visible";
+						}
+						// Output the client-side script within a <script> tag
+						$script = "
+							<script>
+								jQuery(document).ready(function($) {
+									// Hardcoded courseMappings array
+									var courseMappings = {
+										'MS Excel Beginner Course': 909,
+										'MS Excel Intermediate Course': 1221,
+										'MS Excel Advanced Course': 1548,
+										'MS Excel Automation Course': 1920,
+										'MS Excel Foundation Course': 6606,
+										'MS Outlook Foundation Course': 6248,
+										'MS Windows Foundation Course': 5349
+									};
+						
+									// Select the node (the <li> containing the field) that will be observed for mutations
+									var targetNode = $('select[name=\"input_11\"]').closest('li');
+						
+									// Options for the observer (which mutations to observe)
+									var config = { attributes: true, attributeFilter: ['class'] };
+						
+									// Callback function to execute when mutations are observed
+									var callback = function(mutationsList, observer) {
+										for(var mutation of mutationsList) {
+											if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+												if (!$(mutation.target).hasClass('gf_hidden')) {
+													// The field has become visible
+													attachChangeListener();
+												}
 											}
 										}
+									};
+						
+									// Create an observer instance linked to the callback function
+									var observer = new MutationObserver(callback);
+						
+									// Start observing the target node for configured mutations
+									observer.observe(targetNode[0], config);
+						
+									function attachChangeListener() {
+										// Listen for changes on the Course Name field
+										$('select[name=\"input_11\"]').change(function() {
+											var selectedCourseName = $(this).val();
+											var correspondingCourseID = courseMappings[selectedCourseName];
+						
+											// Populate the Course ID field
+											if (correspondingCourseID) {
+												$('input[name=\"input_7\"]').val(correspondingCourseID);
+											} else {
+												// Handle cases where the course name is not in the mappings
+												$('input[name=\"input_7\"]').val('Invalid Course ID');
+											}
+										});
 									}
-								};
-					
-								// Create an observer instance linked to the callback function
-								var observer = new MutationObserver(callback);
-					
-								// Start observing the target node for configured mutations
-								observer.observe(targetNode[0], config);
-					
-								function attachChangeListener() {
-									// Listen for changes on the Course Name field
-									$('select[name=\"input_11\"]').change(function() {
-										var selectedCourseName = $(this).val();
-										var correspondingCourseID = courseMappings[selectedCourseName];
-					
-										// Populate the Course ID field
-										if (correspondingCourseID) {
-											$('input[name=\"input_7\"]').val(correspondingCourseID);
-										} else {
-											// Handle cases where the course name is not in the mappings
-											$('input[name=\"input_7\"]').val('Invalid Course ID');
-										}
-									});
-								}
-							});
-						</script>
-					";
-
-					// Output the script
-					echo $script;
+								});
+							</script>
+						";
+	
+						// Output the script
+						echo $script;
+					}
+				}
+			}
+	
+			// User is logged in and on a LearnDash page, ignore URL parameters
+			if ($isLoggedIn && $isSfwdPage) {
+				$learndash_course_id = learndash_get_course_id();
+				$learndash_course_name = get_the_title($learndash_course_id);
+				if ($field_id == 13) {
+					$field->defaultValue = "spo";
+				}
+				if ($field_id == 11) {
+					$field->defaultValue = $learndash_course_name;
+				}
+				if ($field_id == 7) {
+					$field->defaultValue = $learndash_course_id;
+				}
+			}
+	
+			// User is logged in, set user details
+			if ($isLoggedIn) {
+				if ($field_id == 4.3) {
+					// First Name field
+					$field->defaultValue = $current_user->user_firstname;
+				}
+				if ($field_id == 4.6) {
+					// Last Name field
+					$field->defaultValue = $current_user->user_lastname;
+				}
+				if ($field_id == 5) {
+					// Company field
+					$field->defaultValue = get_user_meta(
+						$current_user->ID,
+						"billing_company",
+						true
+					);
+				}
+				if ($field_id == 8) {
+					// User ID field
+					$field->defaultValue = $current_user->ID;
+				}
+				if ($field_id == 17) {
+					// Email field
+					$field->defaultValue = $current_user->user_email;
 				}
 			}
 		}
-
-		// User is logged in and on a LearnDash page, ignore URL parameters
-		if ($isLoggedIn && $isSfwdPage) {
-			$learndash_course_id = learndash_get_course_id();
-			$learndash_course_name = get_the_title($learndash_course_id);
-			if ($field_id == 13) {
-				$field->defaultValue = "spo";
-			}
-			if ($field_id == 11) {
-				$field->defaultValue = $learndash_course_name;
-			}
-			if ($field_id == 7) {
-				$field->defaultValue = $learndash_course_id;
-			}
-		}
-
-		// User is logged in, set user details
-		if ($isLoggedIn) {
-			if ($field_id == 4.3) {
-				// First Name field
-				$field->defaultValue = $current_user->user_firstname;
-			}
-			if ($field_id == 4.6) {
-				// Last Name field
-				$field->defaultValue = $current_user->user_lastname;
-			}
-			if ($field_id == 5) {
-				// Company field
-				$field->defaultValue = get_user_meta(
-					$current_user->ID,
-					"billing_company",
-					true
-				);
-			}
-			if ($field_id == 8) {
-				// User ID field
-				$field->defaultValue = $current_user->ID;
-			}
-			if ($field_id == 17) {
-				// Email field
-				$field->defaultValue = $current_user->user_email;
-			}
-		}
+	} catch (Exception $e) {
+		error_log("Exception caught in sbma_populate_fields: " . $e->getMessage());
 	}
 
 	return $form;
@@ -338,16 +342,7 @@ function sbma_prevent_duplicate_entries($validationResult)
 				$_POST["input_" . SBMA_FIELD_IS_DUPLICATE] = "true";
 			}
 		}
-		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 		error_log("Duplicate entry detected. Setting GF field ID: " . SBMA_FIELD_IS_DUPLICATE . " to true.");
-		
-		// Delete the duplicate entry
-		if (class_exists('GFAPI') && isset($validationResult["entry"]["id"])) {
-			error_log("class_exists('GFAPI') validated to true.");
-			error_log("GF Entry: $validationResult["entry"]["id"]");
-			GFAPI::delete_entry($validationResult["entry"]["id"]);
-			error_log("Duplicate entry deleted. Entry ID: " . $validationResult["entry"]["id"]);
-		}
 	} else {
 		// If no duplicates, ensure the SBMA_FIELD_IS_DUPLICATE field value is false
 		foreach ($form["fields"] as &$field) {
@@ -375,6 +370,20 @@ function sbma_duplicate_custom_confirmation($confirmation, $form, $entry, $ajax)
 	if ($entry[SBMA_FIELD_IS_DUPLICATE] == true) {
 		error_log("SBMA_FIELD_IS_DUPLICATE evaluated true.");
 		$confirmation = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
+		error_log("Duplicate entry detected. GF confirmation message sbma_duplicate_custom_confirmation: " . $entry['id']);
+		
+		// Delete the duplicate entry
+		if (class_exists('GFAPI')) {
+			error_log("class_exists('GFAPI') validated to true.");
+			try {
+				GFAPI::delete_entry($entry['id']);
+				error_log( "GF Entry Deleted: " . $entry['id'] );
+			} catch (Exception $e) {
+				error_log("Exception caught in sbma_duplicate_custom_confirmation: " . $e->getMessage());
+			}
+		} else {
+			error_log("class_exists('GFAPI') validated to false.");
+		}
 	}
 	return $confirmation;
 }
