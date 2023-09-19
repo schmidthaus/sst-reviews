@@ -1,5 +1,5 @@
 <?php
-// Version 4.3.1
+// Version 4.3.2
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -93,7 +93,7 @@ function sbma_populate_fields($form)
 	foreach ($courses as $course) {
 		$courseMappings[$course->post_title] = $course->ID;
 	}
-	error_log("LearnDash Course ←→ ID array: $courseMappings");
+	error_log("LearnDash Course ←→ ID array: " . implode($courseMappings));
 
 	$modMappings = [
 		"Self-paced Online" => "spo",
