@@ -367,7 +367,7 @@ function sbma_prevent_duplicate_entries($validationResult)
 function sbma_duplicate_custom_confirmation($confirmation, $form, $entry, $ajax) {
 	error_log("Entering sbma_duplicate_custom_confirmation function.");
 	error_log("SBMA_FIELD_IS_DUPLICATE: " . $entry[SBMA_FIELD_IS_DUPLICATE]);
-	if ($entry[SBMA_FIELD_IS_DUPLICATE] == true) {
+	if ($entry[SBMA_FIELD_IS_DUPLICATE] === "true") {
 		error_log("SBMA_FIELD_IS_DUPLICATE evaluated true.");
 		$confirmation = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 		error_log("Duplicate entry detected. GF confirmation message sbma_duplicate_custom_confirmation: " . $entry['id']);
