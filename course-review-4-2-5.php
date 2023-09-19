@@ -343,6 +343,8 @@ function sbma_prevent_duplicate_entries($validationResult)
 		
 		// Delete the duplicate entry
 		if (class_exists('GFAPI') && isset($validationResult["entry"]["id"])) {
+			error_log("class_exists('GFAPI') validated to true.");
+			error_log("GF Entry: $validationResult["entry"]["id"]");
 			GFAPI::delete_entry($validationResult["entry"]["id"]);
 			error_log("Duplicate entry deleted. Entry ID: " . $validationResult["entry"]["id"]);
 		}
