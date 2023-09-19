@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.15
+// Version 4.2.16
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -281,7 +281,9 @@ function sbma_prevent_duplicate_entries($validationResult)
 	if ($form["id"] != SBMA_GRAVITY_FORM) {
 		return $validationResult;
 	}
-
+	// Server-side logging
+	error_log("Entering sbma_prevent_duplicate_entries function.");
+	
 	global $wpdb;
 	// Check if the is_user_logged_in() function exists
 	if (function_exists('is_user_logged_in')) {
@@ -304,6 +306,13 @@ function sbma_prevent_duplicate_entries($validationResult)
 	$courseId = rgpost("input_" . SBMA_FIELD_ID_COURSE_ID);
 	$courseName = rgpost("input_" . SBMA_FIELD_ID_COURSE_NAME);
 	$mod = rgpost("input_" . SBMA_FIELD_ID_METHOD_OF_DELIVERY);
+	
+	error_log("User Logged In: " . ($isLoggedIn ? "Yes" : "No"));
+	error_log("Email: $email");
+	error_log("Course ID: $courseId");
+	error_log("Course Name: $courseName");
+	error_log("Method of Delivery: $mod");
+
 	
 	if ($isLoggedIn) {
 		$where = $wpdb->prepare(
@@ -336,15 +345,21 @@ function sbma_prevent_duplicate_entries($validationResult)
 	);
 	
 	$query = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE {$where}";
+	error_log("SQL Query: $query");
+	
 	$count = $wpdb->get_var($query);
+	error_log("Duplicate Count: $count");
 	
 	if ($count > 0) {
 		$validationResult["is_valid"] = false;
 		$form["confirmation"]["message"] =
 			"<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>";
+		error_log("Duplicate entry detected. Setting validation to false.");
 	}
 	
 	$validationResult["form"] = $form;
+	error_log("Exiting sbma_prevent_duplicate_entries function.");
+	
 	return $validationResult;
 }
 
