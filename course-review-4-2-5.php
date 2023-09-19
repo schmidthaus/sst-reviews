@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.25
+// Version 4.2.26
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -22,7 +22,7 @@ add_action(
 	10,
 	2
 );
-add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
+//add_filter("gform_confirmation_" . SBMA_GRAVITY_FORM, 'sbma_duplicate_custom_confirmation', 10, 4);
 
 /**
  * Conditionally populate Gravity Form fields
@@ -340,6 +340,12 @@ function sbma_prevent_duplicate_entries($validationResult)
 		}
 		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 		error_log("Duplicate entry detected. Setting GF field ID: " . SBMA_FIELD_IS_DUPLICATE . " to true.");
+		
+		// Delete the duplicate entry
+		if (class_exists('GFAPI') && isset($validationResult["entry"]["id"])) {
+			GFAPI::delete_entry($validationResult["entry"]["id"]);
+			error_log("Duplicate entry deleted. Entry ID: " . $validationResult["entry"]["id"]);
+		}
 	} else {
 		// If no duplicates, ensure the SBMA_FIELD_IS_DUPLICATE field value is false
 		foreach ($form["fields"] as &$field) {
