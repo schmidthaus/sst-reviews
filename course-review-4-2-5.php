@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.24
+// Version 4.2.25
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -335,18 +335,19 @@ function sbma_prevent_duplicate_entries($validationResult)
 		// Set the SBMA_FIELD_IS_DUPLICATE field value to true
 		foreach ($form["fields"] as &$field) {
 			if ($field->id == SBMA_FIELD_IS_DUPLICATE) {
-				$field->defaultValue = true;
+				$_POST["input_" . SBMA_FIELD_IS_DUPLICATE] = "true";
 			}
 		}
 		$form['confirmation']['message'] = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
-		error_log("Duplicate entry detected. Setting SBMA_FIELD_IS_DUPLICATE to true.");
+		error_log("Duplicate entry detected. Setting GF field ID: " . SBMA_FIELD_IS_DUPLICATE . " to true.");
 	} else {
 		// If no duplicates, ensure the SBMA_FIELD_IS_DUPLICATE field value is false
 		foreach ($form["fields"] as &$field) {
 			if ($field->id == SBMA_FIELD_IS_DUPLICATE) {
-				$field->defaultValue = false;
+				$_POST["input_" . SBMA_FIELD_IS_DUPLICATE] = "false";
 			}
 		}
+		error_log("Duplicate entry not detected. Setting GF field ID: " . SBMA_FIELD_IS_DUPLICATE . " to false.");
 	}
 	
 	$validationResult["form"] = $form;
