@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.18
+// Version 4.2.19
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -313,19 +313,20 @@ function sbma_prevent_duplicate_entries($validationResult)
 	error_log("Course Name: $courseName");
 	error_log("Method of Delivery: $mod");
 
-	$baseQuery = "SELECT COUNT(*) FROM {$wpdb->prefix}gf_entry_meta WHERE ";
+	$query = "
+		SELECT COUNT(*) 
+		FROM {$wpdb->prefix}gf_entry_meta AS em1
+		JOIN {$wpdb->prefix}gf_entry_meta AS em2 ON em1.entry_id = em2.entry_id
+		JOIN {$wpdb->prefix}gf_entry_meta AS em3 ON em1.entry_id = em3.entry_id
+		JOIN {$wpdb->prefix}gf_entry_meta AS em4 ON em1.entry_id = em4.entry_id
+		WHERE 
+			em1.meta_key = %s AND em1.meta_value = %s AND
+			em2.meta_key = %s AND em2.meta_value = %s AND
+			em3.meta_key = %s AND em3.meta_value = %s AND
+			em4.meta_key = %s AND em4.meta_value = %s
+	";
 	
-	if ($isLoggedIn) {
-		$userCondition = $wpdb->prepare("meta_key = '_gform-entry-user-id' AND meta_value = %s", $currentUser->ID);
-	} else {
-		$userCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_EMAIL, $email);
-	}
-	
-	$courseIdCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_ID, $courseId);
-	$courseNameCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_COURSE_NAME, $courseName);
-	$modCondition = $wpdb->prepare("meta_key = %s AND meta_value = %s", SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
-	
-	$query = $baseQuery . $userCondition . " AND " . $courseIdCondition . " AND " . $courseNameCondition . " AND " . $modCondition;
+	$query = $wpdb->prepare($query, SBMA_FIELD_ID_EMAIL, $email, SBMA_FIELD_ID_COURSE_ID, $courseId, SBMA_FIELD_ID_COURSE_NAME, $courseName, SBMA_FIELD_ID_METHOD_OF_DELIVERY, $mod);
 	error_log("SQL Query: $query");
 	
 	$count = $wpdb->get_var($query);
