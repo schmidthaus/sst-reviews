@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.23
+// Version 4.2.24
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -15,7 +15,7 @@ define("SBMA_FIELD_IS_DUPLICATE", 19);
 
 // Add filters and actions
 add_filter("gform_pre_render_" . SBMA_GRAVITY_FORM, "sbma_populate_fields");
-add_action("gform_pre_submission_" . SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entries');
+add_action("gform_validation_" . SBMA_GRAVITY_FORM, 'sbma_prevent_duplicate_entries');
 add_action(
 	"gform_after_submission_" . SBMA_GRAVITY_FORM,
 	"sbma_mark_course_as_complete_redirect",
@@ -361,7 +361,10 @@ function sbma_prevent_duplicate_entries($validationResult)
  * @return array The modified confirmation message result object.
  */
 function sbma_duplicate_custom_confirmation($confirmation, $form, $entry, $ajax) {
+	error_log("Entering sbma_duplicate_custom_confirmation function.");
+	error_log("SBMA_FIELD_IS_DUPLICATE: " . $entry[SBMA_FIELD_IS_DUPLICATE]);
 	if ($entry[SBMA_FIELD_IS_DUPLICATE] == true) {
+		error_log("SBMA_FIELD_IS_DUPLICATE evaluated true.");
 		$confirmation = '<h4>Thank you, you have already sent in a review for this course. No need to resend.</h4>';
 	}
 	return $confirmation;
