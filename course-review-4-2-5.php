@@ -1,5 +1,5 @@
 <?php
-// Version 4.2.29
+// Version 4.3.1
 
 // Constants for Gravity Form and field IDs
 define("SBMA_GRAVITY_FORM", 11);
@@ -36,6 +36,9 @@ function sbma_populate_fields($form)
 	if ($form["id"] != SBMA_GRAVITY_FORM) {
 		return $form;
 	}
+	
+	// Server-side logging
+	error_log("Entering sbma_populate_fields function.");
 
 	$params = array_map("sanitize_text_field", $_GET);
 	$postType = get_post_type();
@@ -44,10 +47,12 @@ function sbma_populate_fields($form)
 	// Check if the is_user_logged_in() function exists
 	if (function_exists('is_user_logged_in')) {
 		// The is_user_logged_in() function is available
+		error_log("The is_user_logged_in() function is available.");
 		$isLoggedIn = is_user_logged_in();
 	} else {
 		// The is_user_logged_in() function is not available
 		// Use alternative method to determine $isLoggedIn
+		error_log("The is_user_logged_in() function is not available. Use alternative method.");
 	
 		// Check if a user is logged in using the global $current_user object
 		global $current_user;
@@ -58,7 +63,12 @@ function sbma_populate_fields($form)
 	
 	// Now $isLoggedIn contains the appropriate value
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
-
+		
+	error_log("URL Parameters: $params");
+	error_log("Post Type: $postType");
+	error_log("Is LearnDash page: $isSfwdPage");
+	error_log("Is User Logged In: $isLoggedIn");
+	error_log("Current User ID: $currentUser");
 
 	/**	$courseMappings = [
 		"MS Excel Beginner Course" => 909,
@@ -83,6 +93,7 @@ function sbma_populate_fields($form)
 	foreach ($courses as $course) {
 		$courseMappings[$course->post_title] = $course->ID;
 	}
+	error_log("LearnDash Course ←→ ID array: $courseMappings");
 
 	$modMappings = [
 		"Self-paced Online" => "spo",
@@ -96,6 +107,7 @@ function sbma_populate_fields($form)
 	
 			// If user is NOT on a LearnDash page, process URL parameters
 			if ((!$isLoggedIn || $isLoggedIn) && !$isSfwdPage) {
+				error_log("User is NOT on a LearnDash page, process URL parameters.");
 				$url_value = isset($params["field_$field_id"])
 					? $params["field_$field_id"]
 					: null;
@@ -111,6 +123,7 @@ function sbma_populate_fields($form)
 	
 				// Field 13: Method of Delivery
 				if ($field_id == 13) {
+					error_log("Field 13: Method of Delivery.");
 					if (isset($modMappings[$mod_from_url])) {
 						$field->defaultValue = $modMappings[$mod_from_url];
 					} elseif ($isLoggedIn) {
@@ -122,6 +135,7 @@ function sbma_populate_fields($form)
 	
 				// Fields 11 and 7: Course Name and Course ID
 				if ($field_id == 11 || $field_id == 7) {
+					error_log("Fields 11 and 7: Course Name and Course ID.");
 					$url_course_name_valid = isset(
 						$courseMappings[$course_name_from_url]
 					);
@@ -152,7 +166,9 @@ function sbma_populate_fields($form)
 								: $course_id_from_url;
 					} else {
 						// Edge cases: Invalid or non-matching course name and ID
+						error_log("Edge cases: Invalid or non-matching course name and ID.");
 						if ($field_id == 11) {
+							error_log("Please select a valid course from the list validation. Is the Course Name field visible?");
 							$field->isRequired = true;
 							$field->errorMessage =
 								"Please select a valid course from the list.";
@@ -224,8 +240,11 @@ function sbma_populate_fields($form)
 	
 			// User is logged in and on a LearnDash page, ignore URL parameters
 			if ($isLoggedIn && $isSfwdPage) {
+				error_log("User is logged in and on a LearnDash page, ignore URL parameters.");
 				$learndash_course_id = learndash_get_course_id();
 				$learndash_course_name = get_the_title($learndash_course_id);
+				error_log("LearnDash Course ID: $learndash_course_id");
+				error_log("LearnDash Course Name: $learndash_course_name");
 				if ($field_id == 13) {
 					$field->defaultValue = "spo";
 				}
@@ -239,6 +258,7 @@ function sbma_populate_fields($form)
 	
 			// User is logged in, set user details
 			if ($isLoggedIn) {
+				error_log("User is logged in, set user details.");
 				if ($field_id == 4.3) {
 					// First Name field
 					$field->defaultValue = $current_user->user_firstname;
@@ -268,7 +288,8 @@ function sbma_populate_fields($form)
 	} catch (Exception $e) {
 		error_log("Exception caught in sbma_populate_fields: " . $e->getMessage());
 	}
-
+	
+	error_log("Exiting sbma_populate_fields function.");
 	return $form;
 }
 
