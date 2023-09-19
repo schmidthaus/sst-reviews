@@ -64,11 +64,11 @@ function sbma_populate_fields($form)
 	// Now $isLoggedIn contains the appropriate value
 	$currentUser = $isLoggedIn ? wp_get_current_user() : null;
 		
-	error_log("URL Parameters: $params");
+	error_log("URL Parameters: " .json_encode($params));
 	error_log("Post Type: $postType");
 	error_log("Is LearnDash page: $isSfwdPage");
 	error_log("Is User Logged In: $isLoggedIn");
-	error_log("Current User ID: $currentUser");
+	//error_log("Current User ID: $currentUser");
 
 	/**	$courseMappings = [
 		"MS Excel Beginner Course" => 909,
@@ -93,7 +93,7 @@ function sbma_populate_fields($form)
 	foreach ($courses as $course) {
 		$courseMappings[$course->post_title] = $course->ID;
 	}
-	error_log("LearnDash Course ←→ ID array: " . implode($courseMappings));
+	error_log("LearnDash Course ←→ ID array: " . json_encode($courseMappings));
 
 	$modMappings = [
 		"Self-paced Online" => "spo",
