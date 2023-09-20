@@ -2,7 +2,7 @@
 /* 
 Name: Reviews Histogram with MOD and Courses Update - AJAX Edition
 Description: This creates a histogram for product ratings with a method of delivery filter and updates for course handling, now with dynamic AJAX support
-Version: 3.5.7  
+Version: 3.5.9  
 */
 
 /**
@@ -40,7 +40,7 @@ function sbma_create_reviews_histogram_ajax_nonce() {
 		'reviews-histogram-ajax-script',
 		plugins_url('/reviews-histogram/reviews-histogram.js'),
 		array('jquery'),
-		'3..6.1',
+		'3.7.1',
 		true
 	);
 	
@@ -62,24 +62,40 @@ function sbma_reviews_histogram_ajax_action() {
 	error_log('AJAX request received at: ' . admin_url('admin-ajax.php'));
 	 
 	// Check AJAX nonce for security
-	if ( ! wp_verify_nonce( $_POST['nonce'], 'sbma_reviews_histogram_ajax_nonce' ) ) {
-		error_log('Nonce check failed.');
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'reviews_histogram_nonce')) {
+		echo json_encode(array(
+			'success' => false,
+			'html' => '',
+			'message' => 'Security check failed.'
+		));
 		wp_die('Nonce check failed.', 403);
 	}
  
 	// Handle the AJAX request
-	// Use the $_POST array to retrieve filter values
-	$atts = array(
-		 'course-dynamic' => isset($_POST['course-dynamic']) ? sanitize_text_field($_POST['course-dynamic']) : null,
-		 'mod-dynamic' => isset($_POST['mod-dynamic']) ? sanitize_text_field($_POST['mod-dynamic']) : null,
-		 'stars-dynamic' => isset($_POST['stars-dynamic']) ? sanitize_text_field($_POST['stars-dynamic']) : null,
-	);
-	 
-	// Return the result as JSON
-	echo generate_reviews_histogram_shortcode($atts);
-	error_log("Exit sbma_reviews_histogram_ajax_action function");
-	 
-	wp_die(); // All ajax handlers should die when finished
+	// Get filter values from the AJAX request
+	 $course = isset($_POST['currentCourseFilter']) ? sanitize_text_field($_POST['currentCourseFilter']) : '';
+	 $mod = isset($_POST['currentModFilter']) ? sanitize_text_field($_POST['currentModFilter']) : '';
+	 $stars = isset($_POST['currentStarsFilter']) ? intval($_POST['currentStarsFilter']) : '';
+	
+	 // Generate the histogram HTML based on the filter values
+	 // Assuming you have a function named generate_histogram_html that takes the filter values and returns the HTML
+	 $histogram_html = generate_reviews_histogram_shortcode($course, $mod, $stars);
+	
+	 if ($histogram_html) {
+		 echo json_encode(array(
+			 'success' => true,
+			 'html' => $histogram_html,
+			 'message' => 'Histogram updated successfully.'
+		 ));
+	 } else {
+		 echo json_encode(array(
+			 'success' => false,
+			 'html' => '',
+			 'message' => 'Failed to generate histogram. Please check the filter values and try again.'
+		 ));
+	 }
+	
+	 wp_die(); // All ajax handlers should die when finished
  }
  
 /**
@@ -120,9 +136,9 @@ function sbma_views_filter_callback($out) {
 function generate_reviews_histogram_shortcode($atts) {
 	error_log("Enter generate_reviews_histogram_shortcode function");
 	// Check if the function has already been executed
-	static $already_executed = false;
-	if ($already_executed) return;
-	$already_executed = true;
+	//static $already_executed = false;
+	//if ($already_executed) return;
+	//$already_executed = true;
 	
 	global $wpdb;
 	
@@ -141,18 +157,6 @@ function generate_reviews_histogram_shortcode($atts) {
 		$courseMappings[$course->post_title] = $course->ID;
 	}
 	error_log("LearnDash Course ←→ ID array: " . json_encode($courseMappings));
-	
-	// [DEPRECIATED]: REMOVE AFTER TESTING $courseMappings
-	/* Set acceptable 'course' values
-	$valid_courses = [
-		'MS Excel Beginner Course',
-		'MS Excel Intermediate Course',
-		'MS Excel Advanced Course',
-		'MS Excel Automation Course',
-		'MS Excel Foundation Course',
-		'MS Outlook Course',
-		'MS Windows Foundation Course'
-	]; */
 	
 	// Set acceptable 'mod' values
 	$modMappings = [
@@ -247,11 +251,11 @@ function generate_reviews_histogram_shortcode($atts) {
 	
 		if (defined('DOING_AJAX') && DOING_AJAX) {
 			wp_send_json(array(
-				'html' => 'No Courses, Methods of Delivery, or Stars found for this filter. Please select different filter values',
+				'html' => '<div class="reviews-histogram">
+							<p style="font-size:small;">No results were found for this filter. Please select different filter values</p>',
 			));
 		} else {
-			// [TASK] This doesn't make any sense. Revisit.
-			return 'No course, mod, or stars reviews found.';
+			return __return_false();
 		}
 	}
 
@@ -259,7 +263,8 @@ function generate_reviews_histogram_shortcode($atts) {
 	$ratings = array_count_values($results);
 	$total_ratings = array_sum($ratings);
 	
-	error_log('Tally ratings: ' . print_r($ratings, true) . ', Total ratings: ' . $total_ratings);
+	error_log('Tally ratings: ' . print_r($ratings, true));
+	error_log('Total ratings: ' . $total_ratings);
 	
 	// Calculate the ratings percentages
 	$ratings_percentages = [];
