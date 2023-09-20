@@ -1,4 +1,4 @@
-// Reviews Histogram AJAX event handler v3.6.1
+// Reviews Histogram AJAX event handler v3.6.2
 
 jQuery(function ($) {
 	// Retrieve Filter values from URL parameters
@@ -31,7 +31,7 @@ jQuery(function ($) {
 
 	// Listen for changes on the filters
 	filters.forEach(function (filter) {
-		filter.change(debounce(handleFilterChange, 1000)); // debouncing the event handler to 1000 ms
+		filter.change(debounce(handleToolsetViewFilterChange, 1000)); // debouncing the event handler to 1000 ms
 	});
 
 	// Trigger the histogram update whenever any AJAX request completes
@@ -58,34 +58,13 @@ jQuery(function ($) {
 			},
 			success: function (response) {
 				// Handle the response
-				$.post(
-					reviews_histogram_ajax_obj.ajax_url,
-					data,
-					function (response) {
-						// Update the histogram with the new data only if the HTML is not empty
-						if (
-							response &&
-							response.html &&
-							response.html.trim() !== ""
-						) {
-							$(".reviews-histogram").replaceWith(response.html);
-							console.log(
-								"AJAX updated histogram: " + response.html
-							);
-						} else {
-							console.error(
-								"AJAX error updating histogram: ",
-								response
-							);
-						}
-					}
-				).fail(function (jqXHR, textStatus, errorThrown) {
-					console.error(
-						"Error requesting histogram: ",
-						textStatus,
-						errorThrown
-					);
-				});
+				// Update the histogram with the new data only if the HTML is not empty
+				if (response && response.html && response.html.trim() !== "") {
+					$(".reviews-histogram").replaceWith(response.html);
+					console.log("AJAX updated histogram: " + response.html);
+				} else {
+					console.error("AJAX error updating histogram: ", response);
+				}
 			},
 		});
 		console.log("Exit handleToolsetViewFilterChange function.");
