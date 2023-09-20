@@ -1,72 +1,84 @@
-// Reviews Histogram AJAX event handler v3.6.3
+// Reviews Histogram AJAX event handler v3.7.1
 
-jQuery(function ($) {
-	// Retrieve Filter values from URL parameters
-	var courseFilter = $('[name="wpv-wpcf-testimonial-course"]');
-	var modFilter = $('[name="wpv-wpcf-testimonial-mod"]');
-	var starsFilter = $('[name="wpcf-testimonial-course-stars"]');
-	var filters = [courseFilter, modFilter, starsFilter];
+jQuery(document).ready(function ($) {
+	// Variables to store the current filter values
+	let currentCourseFilter = "";
+	let currentModFilter = "";
+	let currentStarsFilter = "";
 
-	console.log("Initial courseFilter: " + courseFilter.val());
-	console.log("Initial modFilter: " + modFilter.val());
-	console.log("Initial starsFilter: " + starsFilter.val());
+	// Function to handle filter changes
+	function handleFilterChange() {
+		const newCourseFilter = $(
+			"#wpv_control_select_wpcf-testimonial-course"
+		).val();
+		const newModFilter = $(
+			"#wpv_control_select_wpcf-testimonial-mod"
+		).val();
+		const newStarsFilter = $(
+			'input[name="wpv-wpcf-testimonial-course-stars"]:checked'
+		).val();
 
-	// Debounce function
-	function debounce(func, wait) {
-		var timeout;
+		// Check if any filter value has changed
+		if (
+			newCourseFilter !== currentCourseFilter ||
+			newModFilter !== currentModFilter ||
+			newStarsFilter !== currentStarsFilter
+		) {
+			// Update the current filter values
+			currentCourseFilter = newCourseFilter;
+			currentModFilter = newModFilter;
+			currentStarsFilter = newStarsFilter;
 
-		return function executedFunction() {
-			var context = this;
-			var args = arguments;
-
-			var later = function () {
-				timeout = null;
-				func.apply(context, args);
-			};
-
-			clearTimeout(timeout);
-			timeout = setTimeout(later, wait);
-		};
+			// Call the updateHistogram function (which sends the AJAX request)
+			updateHistogram();
+		}
 	}
 
-	// Listen for changes on the filters
-	filters.forEach(function (filter) {
-		filter.change(debounce(handleToolsetViewFilterChange, 1000)); // debouncing the event handler to 1000 ms
-	});
+	// Function to update the histogram
+	function updateHistogram() {
+		const data = {
+			action: "sbma_reviews_histogram_ajax_action",
+			course: currentCourseFilter,
+			mod: currentModFilter,
+			stars: currentStarsFilter,
+			nonce: reviews_histogram_ajax_obj.nonce,
+		};
 
-	// Trigger the histogram update whenever any AJAX request completes
-	jQuery(document).ajaxComplete(function () {
-		//console.log("ajaxComplete event triggered.");
-		handleToolsetViewFilterChange();
-	});
-
-	// Handle Toolset View Filter changes
-	function handleToolsetViewFilterChange() {
-		//console.log("Enter handleToolsetViewFilterChange function.");
-		jQuery.ajax({
+		$.ajax({
+			type: "POST",
 			url: reviews_histogram_ajax_obj.ajax_url,
-			type: "post",
-			data: {
-				action: "sbma_reviews_histogram_ajax_action",
-				nonce: reviews_histogram_ajax_obj.nonce,
-				// Other data to send with the request
-				"course-dynamic": courseFilter.val()
-					? courseFilter.val()
-					: null,
-				"mod-dynamic": modFilter.val() ? modFilter.val() : null,
-				"stars-dynamic": starsFilter.val() ? starsFilter.val() : null,
-			},
+			data: data,
 			success: function (response) {
-				// Handle the response
-				// Update the histogram with the new data only if the HTML is not empty
-				if (response && response.html && response.html.trim() !== "") {
-					$(".reviews-histogram").replaceWith(response.html);
-					console.log("AJAX updated histogram: " + response.html);
+				if (response && response.html) {
+					$(".reviews-histogram").html(response.html);
 				} else {
-					//console.error("AJAX error updating histogram: ", response);
+					console.error("AJAX error updating histogram:", response);
 				}
 			},
+			error: function (error) {
+				console.error("AJAX request failed:", error);
+			},
 		});
-		//console.log("Exit handleToolsetViewFilterChange function.");
 	}
+
+	// Attach event listener to the form to detect changes in filters
+	$(".wpv-filter-form").on(
+		"change",
+		".js-wpv-filter-trigger",
+		handleFilterChange
+	);
+
+	// Initial logging of filter values
+	console.log(
+		"Initial courseFilter:",
+		$("#wpv_control_select_wpcf-testimonial-course").val()
+	);
+	console.log(
+		"Initial modFilter:",
+		$("#wpv_control_select_wpcf-testimonial-mod").val()
+	);
+	console.log(
+		"Initial starsFilter:",
+		$('input[name="wpv-wpcf-testimonial-course-stars"]:checked').val()
+	);
 });
