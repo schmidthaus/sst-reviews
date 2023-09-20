@@ -1,41 +1,15 @@
-// Reviews Histogram AJAX functionality v3.5.6
+// Reviews Histogram AJAX event handler v3.6.1
+
 jQuery(function ($) {
+	// Retrieve Filter values from URL parameters
 	var courseFilter = $('[name="wpv-wpcf-testimonial-course"]');
 	var modFilter = $('[name="wpv-wpcf-testimonial-mod"]');
 	var starsFilter = $('[name="wpcf-testimonial-course-stars"]');
 	var filters = [courseFilter, modFilter, starsFilter];
 
-	// Function to handle filter change
-	function handleFilterChange() {
-		var data = {
-			action: "get_reviews_histogram",
-			"course-dynamic": courseFilter.val() ? courseFilter.val() : null,
-			"mod-dynamic": modFilter.val() ? modFilter.val() : null,
-			"stars-dynamic": starsFilter.val() ? starsFilter.val() : null,
-			security: ajax_object.security, // Use nonce for added security
-		};
-
-		// Check if nonce is available
-		if (!data.security || data.security === "") {
-			console.error("Nonce security token is missing.");
-			return;
-		}
-
-		$.post(ajax_object.ajax_url, data, function (response) {
-			// Update the histogram with the new data only if the HTML is not empty
-			if (response && response.html && response.html.trim() !== "") {
-				$(".reviews-histogram").replaceWith(response.html);
-			} else {
-				console.error("Error updating histogram: ", response);
-			}
-		}).fail(function (jqXHR, textStatus, errorThrown) {
-			console.error(
-				"Error requesting histogram: ",
-				textStatus,
-				errorThrown
-			);
-		});
-	}
+	console.log("Initial courseFilter: " + courseFilter);
+	console.log("Initial modFilter: " + modFilter);
+	console.log("Initial starsFilter: " + starsFilter);
 
 	// Debounce function
 	function debounce(func, wait) {
@@ -62,7 +36,58 @@ jQuery(function ($) {
 
 	// Trigger the histogram update whenever any AJAX request completes
 	jQuery(document).ajaxComplete(function () {
-		console.log("AJAX request completed!");
-		handleFilterChange();
+		console.log("ajaxComplete event triggered.");
+		handleToolsetViewFilterChange();
 	});
+
+	// Handle Toolset View Filter changes
+	function handleToolsetViewFilterChange() {
+		console.log("Enter handleToolsetViewFilterChange function.");
+		jQuery.ajax({
+			url: reviews_histogram_ajax_obj.ajax_url,
+			type: "post",
+			data: {
+				action: "sbma_reviews_histogram_ajax_action",
+				nonce: reviews_histogram_ajax_obj.nonce,
+				// Other data to send with the request
+				"course-dynamic": courseFilter.val()
+					? courseFilter.val()
+					: null,
+				"mod-dynamic": modFilter.val() ? modFilter.val() : null,
+				"stars-dynamic": starsFilter.val() ? starsFilter.val() : null,
+			},
+			success: function (response) {
+				// Handle the response
+				$.post(
+					reviews_histogram_ajax_obj.ajax_url,
+					data,
+					function (response) {
+						// Update the histogram with the new data only if the HTML is not empty
+						if (
+							response &&
+							response.html &&
+							response.html.trim() !== ""
+						) {
+							$(".reviews-histogram").replaceWith(response.html);
+							console.log(
+								"AJAX updated histogram: " + response.html
+							);
+						} else {
+							console.error(
+								"AJAX error updating histogram: ",
+								response
+							);
+						}
+					}
+				).fail(function (jqXHR, textStatus, errorThrown) {
+					console.error(
+						"Error requesting histogram: ",
+						textStatus,
+						errorThrown
+					);
+				});
+			},
+		});
+		console.log("Exit handleToolsetViewFilterChange function.");
+	}
 });
