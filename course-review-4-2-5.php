@@ -122,6 +122,7 @@ function sbma_populate_fields($form)
 					: null;
 	
 				// Field 13: Method of Delivery
+				// TASK What to do if incorrect (non array value passed)?
 				if ($field_id == 13) {
 					error_log("Field 13: Method of Delivery.");
 					if (isset($modMappings[$mod_from_url])) {
