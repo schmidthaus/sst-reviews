@@ -1,4 +1,4 @@
-// Reviews Histogram AJAX event handler v3.6.2
+// Reviews Histogram AJAX event handler v3.6.3
 
 jQuery(function ($) {
 	// Retrieve Filter values from URL parameters
@@ -7,9 +7,9 @@ jQuery(function ($) {
 	var starsFilter = $('[name="wpcf-testimonial-course-stars"]');
 	var filters = [courseFilter, modFilter, starsFilter];
 
-	console.log("Initial courseFilter: " + courseFilter);
-	console.log("Initial modFilter: " + modFilter);
-	console.log("Initial starsFilter: " + starsFilter);
+	console.log("Initial courseFilter: " + courseFilter.val());
+	console.log("Initial modFilter: " + modFilter.val());
+	console.log("Initial starsFilter: " + starsFilter.val());
 
 	// Debounce function
 	function debounce(func, wait) {
@@ -36,13 +36,13 @@ jQuery(function ($) {
 
 	// Trigger the histogram update whenever any AJAX request completes
 	jQuery(document).ajaxComplete(function () {
-		console.log("ajaxComplete event triggered.");
+		//console.log("ajaxComplete event triggered.");
 		handleToolsetViewFilterChange();
 	});
 
 	// Handle Toolset View Filter changes
 	function handleToolsetViewFilterChange() {
-		console.log("Enter handleToolsetViewFilterChange function.");
+		//console.log("Enter handleToolsetViewFilterChange function.");
 		jQuery.ajax({
 			url: reviews_histogram_ajax_obj.ajax_url,
 			type: "post",
@@ -63,10 +63,10 @@ jQuery(function ($) {
 					$(".reviews-histogram").replaceWith(response.html);
 					console.log("AJAX updated histogram: " + response.html);
 				} else {
-					console.error("AJAX error updating histogram: ", response);
+					//console.error("AJAX error updating histogram: ", response);
 				}
 			},
 		});
-		console.log("Exit handleToolsetViewFilterChange function.");
+		//console.log("Exit handleToolsetViewFilterChange function.");
 	}
 });
