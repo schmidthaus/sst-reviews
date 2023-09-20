@@ -1,5 +1,5 @@
 <?php
-
+// REVIEW
 add_shortcode( 'course_comments', 'sbma_course_comments_rating_shortcode' );
 function sbma_course_comments_rating_shortcode( $atts ) {
 	if ( ! class_exists( 'Types_Main' ) ) {
