@@ -1,4 +1,4 @@
-// Reviews Histogram AJAX event handler v3.7.1
+// Reviews Histogram AJAX event handler v3.7.2
 
 jQuery(document).ready(function ($) {
 	// Variables to store the current filter values
@@ -49,11 +49,7 @@ jQuery(document).ready(function ($) {
 			url: reviews_histogram_ajax_obj.ajax_url,
 			data: data,
 			success: function (response) {
-				if (response && response.html) {
-					$(".reviews-histogram").html(response.html);
-				} else {
-					console.error("AJAX error updating histogram:", response);
-				}
+				$(".reviews-histogram").html(response.html);
 			},
 			error: function (error) {
 				console.error("AJAX request failed:", error);
